@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Logging;
 using MonthlyScheduler.Models;
+
+#if DEBUG
+using Microsoft.Extensions.Logging;
+#endif
 
 namespace MonthlyScheduler.Data;
 
@@ -29,40 +31,18 @@ public class SchedulerDbContext : DbContext
         
         // Set database path in the data directory
         DbPath = Path.Combine(dataPath, "scheduler.db");
-        Console.WriteLine($"Using database at: {DbPath}");
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={DbPath}")
-            .LogTo(Console.WriteLine, LogLevel.Information)
+        options.UseSqlite($"Data Source={DbPath}");
+        
+        #if DEBUG
+        // Enable logging only in debug builds
+        options.LogTo(Console.WriteLine, LogLevel.Information)
             .EnableSensitiveDataLogging()
             .EnableDetailedErrors();
-
-        Console.WriteLine($"Configuring database connection to: {DbPath}");
-        
-        // Verify the database exists and is accessible
-        if (File.Exists(DbPath))
-        {
-            Console.WriteLine("Database file exists");
-            try
-            {
-                using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={DbPath}");
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = "SELECT COUNT(*) FROM Members";
-                var count = Convert.ToInt32(command.ExecuteScalar());
-                Console.WriteLine($"Direct database query shows {count} members in the database");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error accessing database: {ex.Message}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("Database file does not exist!");
-        }
+        #endif
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

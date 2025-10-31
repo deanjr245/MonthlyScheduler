@@ -30,23 +30,17 @@ public class ScheduleService
 
         var weeklySchedules = new List<WeeklySchedule>();
         var monthlyAssignments = new Dictionary<(int DutyId, ServiceType Service), HashSet<Member>>();
-        var memberMonthlyCount = new Dictionary<Member, int>();
         var memberWeeklyAssignments = new Dictionary<DateTime, HashSet<Member>>();
         var dutyTypes = await _context.DutyTypes.ToListAsync();
 
-        // Initialize member monthly counts
-        foreach (var member in members)
-        {
-            memberMonthlyCount[member] = 0;
-        }
+        // Initialize member monthly counts using LINQ
+        var memberMonthlyCount = members.ToDictionary(m => m, m => 0);
         
-        // Initialize monthly assignment tracking
-        foreach (var duty in dutyTypes)
-        {
-            monthlyAssignments[(duty.Id, ServiceType.Sunday_AM)] = new HashSet<Member>();
-            monthlyAssignments[(duty.Id, ServiceType.Sunday_PM)] = new HashSet<Member>();
-            monthlyAssignments[(duty.Id, ServiceType.Wednesday)] = new HashSet<Member>();
-        }
+        // Initialize monthly assignment tracking using LINQ
+        var serviceTypes = new[] { ServiceType.Sunday_AM, ServiceType.Sunday_PM, ServiceType.Wednesday };
+        dutyTypes.SelectMany(duty => serviceTypes.Select(service => (duty.Id, service)))
+            .ToList()
+            .ForEach(key => monthlyAssignments[key] = new HashSet<Member>());
 
         // Get first Sunday of the month
         var sundayDate = GetFirstSundayOfMonth(year, month);
@@ -177,7 +171,7 @@ public class ScheduleService
         return (weeklySchedules, generatedSchedule);
     }
 
-    private async Task AssignDuties(Dictionary<DutyType, Member> duties, List<Member> members, 
+    private Task AssignDuties(Dictionary<DutyType, Member> duties, List<Member> members, 
         Dictionary<(int DutyId, ServiceType Service), HashSet<Member>> monthlyAssignments,
         ServiceType serviceType, List<DutyType> dutyTypes,
         Dictionary<Member, int> memberMonthlyCount,
@@ -290,6 +284,8 @@ public class ScheduleService
                 throw new InvalidOperationException($"Error assigning {dutyType.Name}: {ex.Message}", ex);
             }
         }
+        
+        return Task.CompletedTask;
     }
 
     private static DateTime GetFirstSundayOfMonth(int year, int month)

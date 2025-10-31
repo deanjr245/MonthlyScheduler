@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "i+ZjrSEeh0w=",
+  "dgSpecHash": "K5b0h+QAJRU=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Dean Williams\\Projects\\MonthlyScheduler\\MonthlyScheduler.csproj",
+  "projectFilePath": "c:\\Users\\Dean Williams\\Projects\\MonthlyScheduler\\MonthlyScheduler.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Dean Williams\\.nuget\\packages\\csvhelper\\33.1.0\\csvhelper.33.1.0.nupkg.sha512",
     "C:\\Users\\Dean Williams\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",

@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using MonthlyScheduler.Data;
 using MonthlyScheduler.Services;
 using MonthlyScheduler.Models;
-using MonthlyScheduler.Utilities;
 using MonthlyScheduler.Exceptions;
 using MonthlyScheduler.UI;
+using MonthlyScheduler.Utilities;
+using static MonthlyScheduler.Utilities.AppStringConstants;
 
 namespace MonthlyScheduler;
 
@@ -61,37 +62,37 @@ public partial class Form1 : Form
 
 
         // Configure buttons
-        btnUpload.Text = "Upload Spreadsheet";
+        btnUpload.Text = ButtonUploadText;
         btnUpload.Width = 180;
         btnUpload.Click += BtnUpload_Click;
         btnUpload.ApplySecondaryStyle();
 
-        btnGenerateSchedule.Text = "Generate Schedule";
+        btnGenerateSchedule.Text = ButtonGenerateText;
         btnGenerateSchedule.Width = 180;
         btnGenerateSchedule.Click += BtnGenerateSchedule_Click;
         btnGenerateSchedule.ApplyModernStyle();
 
-        btnViewSavedSchedules.Text = "View Saved Schedules";
+        btnViewSavedSchedules.Text = ButtonViewSchedulesText;
         btnViewSavedSchedules.Width = 180;
         btnViewSavedSchedules.Click += BtnViewSavedSchedules_Click;
         btnViewSavedSchedules.ApplyModernStyle();
 
-        btnExportMembers.Text = "Export Members - CSV";
+        btnExportMembers.Text = ButtonExportMembersText;
         btnExportMembers.Width = 180;
         btnExportMembers.Click += BtnExportMembers_Click;
         btnExportMembers.ApplyModernStyle();
 
-        btnViewMembers.Text = "View Members";
+        btnViewMembers.Text = ButtonViewMembersText;
         btnViewMembers.Width = 180;
         btnViewMembers.Click += BtnViewMembers_Click;
         btnViewMembers.ApplyModernStyle();
 
-        btnAddMember.Text = "Add New Member";
+        btnAddMember.Text = ButtonAddMemberText;
         btnAddMember.Width = 180;
         btnAddMember.Click += BtnAddMember_Click;
         btnAddMember.ApplyModernStyle();
 
-        btnManageDutyTypes.Text = "Manage Duty Types";
+        btnManageDutyTypes.Text = ButtonManageDutyTypesText;
         btnManageDutyTypes.Width = 180;
         btnManageDutyTypes.Click += BtnManageDutyTypes_Click;
         btnManageDutyTypes.ApplyModernStyle();
@@ -136,12 +137,9 @@ public partial class Form1 : Form
     private void SetupLayout()
     {
         // Configure form
-        Text = "Monthly Scheduler";
+        Text = FormTitleMainScheduler;
         Size = new Size(1024, 768);
         WindowState = FormWindowState.Maximized;
-
-        // Set form background color
-
 
         // Create main table layout
         var mainLayout = new TableLayoutPanel
@@ -163,26 +161,20 @@ public partial class Form1 : Form
             Width = 220,
             BackColor = AppStyling.WindowBackground
         };
-        // Set up all row styles
+        // Set up all row styles using LINQ where appropriate
         leftPanel.RowStyles.Clear();
         
         // Row 0: Logo (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         
-        // Rows 1-3: Controls (AutoSize)
-        for (int i = 1; i <= 3; i++)
-        {
-            leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        }
+        // Rows 1-3: Controls (AutoSize) - using LINQ
+        Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
         
         // Row 4: Spacer between Schedule and Member buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
         
-        // Rows 5-7: Member controls (AutoSize)
-        for (int i = 5; i <= 7; i++)
-        {
-            leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        }
+        // Rows 5-7: Member controls (AutoSize) - using LINQ
+        Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
         
         // Row 8: Spacer between Member and Duty Type buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
@@ -222,9 +214,9 @@ public partial class Form1 : Form
             BackColor = AppStyling.WindowBackground
         };
 
-        var monthLabel = new Label { Text = "Select Month:", AutoSize = true };
+        var monthLabel = new Label { Text = LabelSelectMonth, AutoSize = true };
         monthLabel.ApplyModernStyle();
-        var yearLabel = new Label { Text = "Select Year:", AutoSize = true };
+        var yearLabel = new Label { Text = LabelSelectYear, AutoSize = true };
         yearLabel.ApplyModernStyle();
 
         monthYearPanel.Controls.AddRange(
@@ -292,10 +284,16 @@ public partial class Form1 : Form
 
     private async void BtnUpload_Click(object? sender, EventArgs e)
     {
+        const string CsvFilter = "Excel Files|*.csv|All Files|*.*";
+        const string SelectFileTitle = "Select People Data File";
+        const string ImportCompleteTitle = "Import Complete";
+        const string ErrorTitle = "Error";
+        const string ImportErrorMessage = "Error importing data: {0}";
+        
         using OpenFileDialog openFileDialog = new()
         {
-            Filter = "Excel Files|*.csv|All Files|*.*",
-            Title = "Select People Data File"
+            Filter = CsvFilter,
+            Title = SelectFileTitle
         };
 
         if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -310,13 +308,13 @@ public partial class Form1 : Form
                 }
                 catch (ImportResultException ex)
                 {
-                    MessageBox.Show(ex.Message, "Import Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(ex.Message, ImportCompleteTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error importing data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(string.Format(ImportErrorMessage, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
@@ -334,11 +332,11 @@ public partial class Form1 : Form
 
             await ConfigureGrid(selectedYear, selectedMonth, context);
 
-            MessageBox.Show("Schedule generated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(ScheduleGeneratedSuccess, SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error generating schedule: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(string.Format(ErrorGeneratingScheduleFormat, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -393,29 +391,31 @@ public partial class Form1 : Form
         {
             using var context = new SchedulerDbContext();
 
-            // Load all data in parallel
-            var members = context.Members
+            // Load all data asynchronously
+            var members = await context.Members
                 .Include(m => m.AvailableDuties)
                 .OrderBy(m => m.ExcludeFromScheduling)
                 .ThenBy(m => m.LastName)
-                .ThenBy(m => m.FirstName);
+                .ThenBy(m => m.FirstName)
+                .ToListAsync();
 
-            var duties = context.DutyTypes
+            var duties = await context.DutyTypes
                 .OrderBy(dt => dt.Category)
-                .ThenBy(dt => dt.Name);
+                .ThenBy(dt => dt.Name)
+                .ToListAsync();
 
             // Use DataTable instead of dynamic types - much faster
             var dataTable = new DataTable();
-            dataTable.Columns.Add("Last Name", typeof(string));
-            dataTable.Columns.Add("First Name", typeof(string));
-            dataTable.Columns.Add("Form Received", typeof(string));
+            dataTable.Columns.Add(ColumnLastNameText, typeof(string));
+            dataTable.Columns.Add(ColumnFirstNameText, typeof(string));
+            dataTable.Columns.Add(ColumnFormReceivedText, typeof(string));
             
             foreach (var duty in duties)
             {
                 dataTable.Columns.Add(duty.Name, typeof(string));
             }
             
-            dataTable.Columns.Add("Excluded", typeof(string));
+            dataTable.Columns.Add(ColumnExcludedText, typeof(string));
 
             // Pre-build a lookup for member duties for O(1) access
             var memberDutyLookup = members.ToDictionary(
@@ -425,22 +425,22 @@ public partial class Form1 : Form
 
             // Populate rows - much faster than reflection
             dataTable.BeginLoadData(); // Disable constraints and notifications during load
-            foreach (var member in members)
+            
+            // Process members using optimized approach
+            members.ForEach(member =>
             {
                 var row = dataTable.NewRow();
-                row["Last Name"] = member.LastName;
-                row["First Name"] = member.FirstName;
-                row["Form Received"] = member.HasSubmittedForm ? "Yes" : "No";
+                row[ColumnLastNameText] = member.LastName;
+                row[ColumnFirstNameText] = member.FirstName;
+                row[ColumnFormReceivedText] = member.HasSubmittedForm ? YesText : NoText;
                 
                 var dutyIds = memberDutyLookup[member.Id];
-                foreach (var duty in duties)
-                {
-                    row[duty.Name] = dutyIds.Contains(duty.Id) ? "Yes" : "";
-                }
+                duties.ForEach(duty => row[duty.Name] = dutyIds.Contains(duty.Id) ? YesText : string.Empty);
                 
-                row["Excluded"] = member.ExcludeFromScheduling ? "Yes" : "No";
+                row[ColumnExcludedText] = member.ExcludeFromScheduling ? YesText : NoText;
                 dataTable.Rows.Add(row);
-            }
+            });
+            
             dataTable.EndLoadData();
 
             ClearAndSetupGrid(forMembers: true);
@@ -456,8 +456,8 @@ public partial class Form1 : Form
                 // Add Edit and Delete button columns at the FRONT by inserting
                 var editBtn = new DataGridViewButtonColumn
                 {
-                    Name = "Edit",
-                    Text = "Edit",
+                    Name = ColumnEditText,
+                    Text = ColumnEditText,
                     UseColumnTextForButtonValue = true,
                     FlatStyle = FlatStyle.Standard,
                     Width = 80,
@@ -471,8 +471,8 @@ public partial class Form1 : Form
 
                 var deleteBtn = new DataGridViewButtonColumn
                 {
-                    Name = "Delete",
-                    Text = "Delete",
+                    Name = ColumnDeleteText,
+                    Text = ColumnDeleteText,
                     UseColumnTextForButtonValue = true,
                     FlatStyle = FlatStyle.Standard,
                     Width = 80,
@@ -485,39 +485,39 @@ public partial class Form1 : Form
                 scheduleGrid.Columns.Insert(1, deleteBtn);
 
                 // Set fixed widths for name/form/excluded columns
-                if (scheduleGrid.Columns["Last Name"] is DataGridViewColumn lastNameCol)
+                if (scheduleGrid.Columns[ColumnLastNameText] is DataGridViewColumn lastNameCol)
                 {
                     lastNameCol.Width = 120;
                     lastNameCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns["First Name"] is DataGridViewColumn firstNameCol)
+                if (scheduleGrid.Columns[ColumnFirstNameText] is DataGridViewColumn firstNameCol)
                 {
                     firstNameCol.Width = 120;
                     firstNameCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns["Form Received"] is DataGridViewColumn formCol)
+                if (scheduleGrid.Columns[ColumnFormReceivedText] is DataGridViewColumn formCol)
                 {
                     formCol.Width = 100;
                     formCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns["Excluded"] is DataGridViewColumn excludedCol)
+                if (scheduleGrid.Columns[ColumnExcludedText] is DataGridViewColumn excludedCol)
                 {
                     excludedCol.Width = 80;
                     excludedCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
 
-                // All duty columns use Fill mode to distribute remaining space
-                foreach (DataGridViewColumn col in scheduleGrid.Columns)
+                // All duty columns use Fill mode to distribute remaining space - using LINQ
+                var fixedColumns = new HashSet<string> { ColumnEditText, ColumnDeleteText, ColumnLastNameText, ColumnFirstNameText, ColumnFormReceivedText, ColumnExcludedText };
+                
+                scheduleGrid.Columns.Cast<DataGridViewColumn>().ToList().ForEach(col =>
                 {
-                    if (col.Name != "Edit" && col.Name != "Delete" && 
-                        col.Name != "Last Name" && col.Name != "First Name" && 
-                        col.Name != "Form Received" && col.Name != "Excluded")
+                    if (!fixedColumns.Contains(col.Name))
                     {
                         col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                     }
                     col.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
                     col.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
-                }
+                });
             }
             finally
             {
@@ -526,7 +526,7 @@ public partial class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error refreshing members view: {ex.Message}", "Error", 
+            MessageBox.Show(string.Format(ErrorRefreshingMembersFormat, ex.Message), ErrorTitle, 
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -539,7 +539,7 @@ public partial class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error loading members: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(string.Format(ErrorLoadingMembersFormat, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -557,68 +557,84 @@ public partial class Form1 : Form
                 {
                     await GetMembersView();
                 }
-                MessageBox.Show("Member added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(MemberAddedSuccess, SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error adding member: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(string.Format(ErrorAddingMemberFormat, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     private async void ScheduleGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
     {
-        // Ignore header clicks
-        if (e.RowIndex < 0)
-            return;
-
-        // Only handle clicks in member view - check if Edit/Delete columns exist
-        if (!scheduleGrid.Columns.Contains("Edit") || !scheduleGrid.Columns.Contains("Delete"))
-            return;
-
-        // Check if First Name and Last Name columns exist (member view)
-        if (!scheduleGrid.Columns.Contains("First Name") || !scheduleGrid.Columns.Contains("Last Name"))
-            return;
-
-        var row = scheduleGrid.Rows[e.RowIndex];
-        var firstName = row.Cells["First Name"]?.Value?.ToString() ?? string.Empty;
-        var lastName = row.Cells["Last Name"]?.Value?.ToString() ?? string.Empty;
-
-        using var context = new SchedulerDbContext();
-
-        // Find the member in the database
-        var member = await context.Members
-            .Include(m => m.AvailableDuties)
-            .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
-
-        if (member == null)
+        try
         {
-            MessageBox.Show("Member not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
+            // Ignore header clicks
+            if (e.RowIndex < 0)
+                return;
 
-        // Handle Edit button click
-        if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == "Edit")
-        {
-            var memberForm = new Forms.MemberForm(context, member);
-            if (memberForm.ShowDialog() == DialogResult.OK)
+            // Only handle clicks in member view - check if Edit/Delete columns exist
+            if (!scheduleGrid.Columns.Contains(ColumnEditText) || !scheduleGrid.Columns.Contains(ColumnDeleteText))
+                return;
+
+            // Check if First Name and Last Name columns exist (member view)
+            if (!scheduleGrid.Columns.Contains(ColumnFirstNameText) || !scheduleGrid.Columns.Contains(ColumnLastNameText))
+                return;
+
+            var row = scheduleGrid.Rows[e.RowIndex];
+            var firstName = row.Cells[ColumnFirstNameText]?.Value?.ToString() ?? string.Empty;
+            var lastName = row.Cells[ColumnLastNameText]?.Value?.ToString() ?? string.Empty;
+
+            using var context = new SchedulerDbContext();
+
+            // Find the member in the database
+            var member = await context.Members
+                .Include(m => m.AvailableDuties)
+                .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
+
+            if (member == null)
             {
-                await GetMembersView();
+                MessageBox.Show(MemberNotFoundError, ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Handle Edit button click
+            if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == ColumnEditText)
+            {
+                var memberForm = new Forms.MemberForm(context, member);
+                if (memberForm.ShowDialog() == DialogResult.OK)
+                {
+                    await GetMembersView();
+                }
+            }
+            // Handle Delete button click
+            else if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == ColumnDeleteText)
+            {
+                if (MessageBox.Show(
+                    string.Format(ConfirmDeleteMemberFormat, member.FullName), 
+                    ConfirmDeleteTitle, 
+                    MessageBoxButtons.YesNo, 
+                    MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    try
+                    {
+                        context.Members.Remove(member);
+                        await context.SaveChangesAsync();
+                        await GetMembersView();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(string.Format(ErrorDeletingMemberFormat, ex.Message), ErrorTitle,
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
             }
         }
-        // Handle Delete button click
-        else if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == "Delete")
+        catch (Exception ex)
         {
-            if (MessageBox.Show(
-                $"Are you sure you want to delete {member.FullName}?", 
-                "Confirm Delete", 
-                MessageBoxButtons.YesNo, 
-                MessageBoxIcon.Warning) == DialogResult.Yes)
-            {
-                context.Members.Remove(member);
-                await context.SaveChangesAsync();
-                await GetMembersView();
-            }
+            MessageBox.Show(string.Format(ErrorLoadingMembersFormat, ex.Message), ErrorTitle,
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -639,11 +655,11 @@ public partial class Form1 : Form
                 var exportService = new MemberExportService();
                 
                 await exportService.ExportMembersToCSV(context, saveFileDialog.FileName);
-                MessageBox.Show("Members exported successfully!", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(MembersExportedSuccess, ExportCompleteTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error exporting members: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(string.Format(ErrorExportingMembersFormat, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
@@ -658,7 +674,7 @@ public partial class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error managing duty types: {ex.Message}", "Error", 
+            MessageBox.Show(string.Format(ErrorManagingDutyTypesFormat, ex.Message), ErrorTitle, 
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -672,8 +688,8 @@ public partial class Form1 : Form
 
             // Get the duty type first
             var gridRow = scheduleGrid.Rows[e.RowIndex];
-            var serviceText = gridRow.Cells["Service"].Value?.ToString();
-            var dutyTypeName = gridRow.Cells["Duty"].Value?.ToString();
+            var serviceText = gridRow.Cells[ColumnServiceText].Value?.ToString();
+            var dutyTypeName = gridRow.Cells[ColumnDutyText].Value?.ToString();
 
             if (string.IsNullOrEmpty(serviceText) || string.IsNullOrEmpty(dutyTypeName)) return;
 
@@ -684,8 +700,8 @@ public partial class Form1 : Form
             // Only allow editing manually scheduled duties
             if (!dutyTypeToEdit.ManuallyScheduled)
             {
-                MessageBox.Show("This duty is automatically scheduled. To manually assign it, first mark it as 'Include but don't schedule' in the duty type settings.",
-                    "Cannot Edit Assignment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(CannotEditAutoScheduledDuty,
+                    CannotEditAssignmentTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -757,8 +773,8 @@ public partial class Form1 : Form
             {
                 if (serviceType != ServiceType.Sunday_PM)
                 {
-                    MessageBox.Show("This duty only occurs on the last Sunday evening of the month.",
-                        "Cannot Edit Assignment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(LastSundayOnlyOccursMessage,
+                        CannotEditAssignmentTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -778,8 +794,8 @@ public partial class Form1 : Form
 
                 if (selectedDate.Date != lastSunday.Date)
                 {
-                    MessageBox.Show("This duty can only be assigned on the last Sunday evening of the month.",
-                        "Cannot Edit Assignment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(LastSundayOnlyAssignMessage,
+                        CannotEditAssignmentTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
             }
@@ -851,7 +867,7 @@ public partial class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error updating assignment: {ex.Message}", "Error", 
+            MessageBox.Show(string.Format(ErrorUpdatingAssignmentFormat, ex.Message), ErrorTitle, 
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -875,7 +891,7 @@ public partial class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error viewing saved schedules: {ex.Message}", "Error",
+            MessageBox.Show(string.Format(ErrorViewingSavedSchedulesFormat, ex.Message), ErrorTitle,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -903,24 +919,28 @@ public partial class Form1 : Form
             // Configure columns
             scheduleGrid.RowTemplate.Height = 25;
 
-            if (scheduleGrid.Columns["Service"] is DataGridViewColumn serviceCol)
+            // Configure fixed-width columns
+            var fixedWidthColumns = new Dictionary<string, int>
             {
-                serviceCol.Width = 180;
-                serviceCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            }
-            if (scheduleGrid.Columns["Duty"] is DataGridViewColumn dutyCol)
-            {
-                dutyCol.Width = 200;
-                dutyCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            }
+                [ColumnServiceText] = 180,
+                [ColumnDutyText] = 200
+            };
 
-            foreach (DataGridViewColumn col in scheduleGrid.Columns)
-            {
-                if (col.Name != "Service" && col.Name != "Duty")
+            fixedWidthColumns
+                .Where(kvp => scheduleGrid.Columns[kvp.Key] is DataGridViewColumn)
+                .ToList()
+                .ForEach(kvp =>
                 {
-                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-                }
-            }
+                    var col = scheduleGrid.Columns[kvp.Key]!;
+                    col.Width = kvp.Value;
+                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                });
+
+            // Configure fill columns using LINQ
+            scheduleGrid.Columns.Cast<DataGridViewColumn>()
+                .Where(col => !fixedWidthColumns.ContainsKey(col.Name))
+                .ToList()
+                .ForEach(col => col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill);
         }
         finally
         {

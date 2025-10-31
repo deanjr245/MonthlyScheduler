@@ -7,6 +7,9 @@ namespace MonthlyScheduler.Forms;
 
 public class SavedSchedulesForm : Form
 {
+    private const string ConfirmDeleteScheduleFormat = "Are you sure you want to delete the schedule for {0} {1}?";
+    private const string ConfirmDeleteTitle = "Confirm Delete";
+    
     private readonly SchedulerDbContext _context;
     private readonly DataGridView _schedulesGrid;
     private readonly Button _btnLoad;
@@ -230,11 +233,9 @@ public class SavedSchedulesForm : Form
             _btnLoad.Enabled = false;
             _btnDelete.Enabled = false;
 
-            // Clear all checkboxes first
-            foreach (DataGridViewRow row in _schedulesGrid.Rows)
-            {
-                row.Cells["Selected"].Value = false;
-            }
+            // Clear all checkboxes first using LINQ
+            _schedulesGrid.Rows.Cast<DataGridViewRow>().ToList()
+                .ForEach(row => row.Cells["Selected"].Value = false);
 
             if (_schedulesGrid.SelectedRows.Count > 0)
             {
@@ -255,14 +256,11 @@ public class SavedSchedulesForm : Form
 
                 if (_selectedSchedule != null)
                 {
-                    // Update checkboxes
-                    foreach (DataGridViewRow gridRow in _schedulesGrid.Rows)
-                    {
-                        if (gridRow.Cells["Selected"]?.Value != null)
-                        {
-                            gridRow.Cells["Selected"].Value = (gridRow.Index == row.Index);
-                        }
-                    }
+                    // Update checkboxes using LINQ
+                    _schedulesGrid.Rows.Cast<DataGridViewRow>()
+                        .Where(gridRow => gridRow.Cells["Selected"]?.Value != null)
+                        .ToList()
+                        .ForEach(gridRow => gridRow.Cells["Selected"].Value = (gridRow.Index == row.Index));
                 }
 
                     _btnLoad.Enabled = _selectedSchedule != null;
@@ -274,11 +272,9 @@ public class SavedSchedulesForm : Form
                 _selectedSchedule = null;
                 _btnLoad.Enabled = false;
                 _btnDelete.Enabled = false;
-                // Clear checkbox when no selection
-                foreach (DataGridViewRow gridRow in _schedulesGrid.Rows)
-                {
-                    gridRow.Cells["Selected"].Value = false;
-                }
+                // Clear checkbox when no selection using LINQ
+                _schedulesGrid.Rows.Cast<DataGridViewRow>().ToList()
+                    .ForEach(gridRow => gridRow.Cells["Selected"].Value = false);
             }
         }
         catch (Exception ex)
@@ -294,9 +290,10 @@ public class SavedSchedulesForm : Form
     {
         if (_selectedSchedule == null) return;
 
+        var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(_selectedSchedule.Month);
         if (MessageBox.Show(
-            $"Are you sure you want to delete the schedule for {System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(_selectedSchedule.Month)} {_selectedSchedule.Year}?",
-            "Confirm Delete",
+            string.Format(ConfirmDeleteScheduleFormat, monthName, _selectedSchedule.Year),
+            ConfirmDeleteTitle,
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning) == DialogResult.Yes)
         {

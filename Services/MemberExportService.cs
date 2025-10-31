@@ -45,9 +45,10 @@ public class MemberExportService
         
         csv.AppendLine(string.Join(",", headers.Select(EscapeCSV)));
         
-        // Add data rows
-        foreach (var member in members)
+        // Add data rows using LINQ
+        var dataRows = members.Select(member =>
         {
+            var memberDutyIds = member.AvailableDuties.Select(d => d.DutyTypeId).ToHashSet();
             var values = new List<string>
             {
                 EscapeCSV(member.LastName),
@@ -55,14 +56,15 @@ public class MemberExportService
                 member.HasSubmittedForm ? "Yes" : "No"
             };
             
-            foreach (var duty in duties)
-            {
-                values.Add(member.AvailableDuties.Any(d => d.DutyTypeId == duty.Id) ? "Yes" : "");
-            }
-            
+            values.AddRange(duties.Select(duty => memberDutyIds.Contains(duty.Id) ? "Yes" : ""));
             values.Add(member.ExcludeFromScheduling ? "Yes" : "No");
             
-            csv.AppendLine(string.Join(",", values));
+            return string.Join(",", values);
+        });
+        
+        foreach (var row in dataRows)
+        {
+            csv.AppendLine(row);
         }
         
         File.WriteAllText(filePath, csv.ToString());

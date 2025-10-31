@@ -177,3 +177,4 @@ c:\Users\Dean Williams\Projects\MonthlyScheduler\bin\Debug\net9.0-windows\runtim
 c:\Users\Dean Williams\Projects\MonthlyScheduler\bin\Debug\net9.0-windows\runtimes\win-x86\native\libwinpthread-1.dll
 c:\Users\Dean Williams\Projects\MonthlyScheduler\bin\Debug\net9.0-windows\runtimes\win-x86\native\qpdf.dll
 c:\Users\Dean Williams\Projects\MonthlyScheduler\bin\Debug\net9.0-windows\runtimes\win-x86\native\zlib1.dll
+c:\Users\Dean Williams\Projects\MonthlyScheduler\obj\Debug\net9.0-windows\MonthlyScheduler.sourcelink.json

@@ -48,7 +48,8 @@ public partial class ManageDutyTypesForm : Form
         addButton = new Button
         {
             Text = "Add New Duty Type",
-            Dock = DockStyle.Top
+            AutoSize = true,
+            Margin = new Padding(5, 0, 0, 0)
         };
         addButton.Click += AddButton_Click;
         addButton.ApplyModernStyle();

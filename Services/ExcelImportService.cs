@@ -53,28 +53,10 @@ public class ExcelImportService
             // Load and attach all duty types from the database
             var allDutyTypes = await _context.DutyTypes.AsTracking().ToListAsync();
             _context.ChangeTracker.Clear(); // Clear any tracked entities
-            foreach (var dutyType in allDutyTypes)
-            {
-                _context.Attach(dutyType); // Re-attach with unchanged state
-            }
             
-            var duties = new Dictionary<string, DutyType>
-            {
-                ["Scripture Reading"] = allDutyTypes.First(d => d.Name == "Scripture Reading"),
-                ["AM Song Leading"] = allDutyTypes.First(d => d.Name == "AM Song Leading"),
-                ["PM Song Leading"] = allDutyTypes.First(d => d.Name == "PM Song Leading"),
-                ["Wed Song Leading"] = allDutyTypes.First(d => d.Name == "Wed Song Leading"),
-                ["AM Preside at Table"] = allDutyTypes.First(d => d.Name == "AM Preside at Table"),
-                ["PM Preside at Table"] = allDutyTypes.First(d => d.Name == "PM Preside at Table"),
-                ["Opening Prayer"] = allDutyTypes.First(d => d.Name == "Opening Prayer"),
-                ["Closing Prayer"] = allDutyTypes.First(d => d.Name == "Closing Prayer"),
-                ["Foyer Security"] = allDutyTypes.First(d => d.Name == "Foyer Security"),
-                ["Visitor Usher"] = allDutyTypes.First(d => d.Name == "Visitor Usher"),
-                ["Sound Board Operator"] = allDutyTypes.First(d => d.Name == "Sound Board Operator"),
-                ["Advance Song Slides"] = allDutyTypes.First(d => d.Name == "Advance Song Slides"),
-                ["AV Booth Operator"] = allDutyTypes.First(d => d.Name == "AV Booth Operator"),
-                ["Transportation"] = allDutyTypes.First(d => d.Name == "Transportation"),
-            };
+            // Reattach duty types and create dictionary using LINQ (no hard-coded strings)
+            var duties = allDutyTypes.ToDictionary(d => d.Name, d => d);
+            duties.Values.ToList().ForEach(d => _context.Attach(d));
 
             csv.ReadHeader();
             var headers = csv.HeaderRecord;
@@ -82,14 +64,11 @@ public class ExcelImportService
             {
                 throw new InvalidOperationException("No headers found in CSV file");
             }
-            Console.WriteLine("Headers found in CSV: " + string.Join(", ", headers));
             
-            // Validate all required duty columns exist
-            var missingColumns = duties.Keys.Where(duty => !headers.Contains(duty, StringComparer.OrdinalIgnoreCase)).ToList();
-            if (missingColumns.Any())
-            {
-                Console.WriteLine($"Warning: Missing columns: {string.Join(", ", missingColumns)}");
-            }
+            // Create a case-insensitive lookup for headers using LINQ
+            var headerLookup = headers
+                .Select((h, i) => new { Header = h, Index = i })
+                .ToDictionary(x => x.Header, x => x.Index, StringComparer.OrdinalIgnoreCase);
 
             while (await csv.ReadAsync())
             {
@@ -117,45 +96,37 @@ public class ExcelImportService
                     ExcludeFromScheduling = csv.GetField("Exclude From Scheduling")?.Trim().ToLower() == "yes"
                 };
 
-                foreach (var duty in duties)
-                {
-                    try
+                // Process duties using LINQ where possible
+                var validValues = new HashSet<string> { "yes", "y", "true", "1" };
+                
+                var assignedDuties = duties
+                    .Where(duty => headerLookup.ContainsKey(duty.Key))
+                    .Select(duty =>
                     {
-                        // Try to get the field value with exact header match first
-                        string? rawValue = csv.GetField(duty.Key);
-                        
-                        // If not found, try case-insensitive match
-                        if (rawValue == null)
+                        try
                         {
-                            var headerIndex = headers.Select((h, i) => new { Header = h, Index = i })
-                                                    .FirstOrDefault(h => h.Header.Equals(duty.Key, StringComparison.OrdinalIgnoreCase));
-                            if (headerIndex != null)
+                            var rawValue = csv.GetField(headerLookup[duty.Key]);
+                            
+                            if (!string.IsNullOrWhiteSpace(rawValue))
                             {
-                                rawValue = csv.GetField(headerIndex.Index);
+                                var value = rawValue.Trim().ToLower();
+                                if (validValues.Contains(value))
+                                {
+                                    return duty.Value;
+                                }
                             }
                         }
-
-                        Console.WriteLine($"Raw value for {duty.Key}: '{rawValue}'");
-                        
-                        if (!string.IsNullOrWhiteSpace(rawValue))
+                        catch
                         {
-                            var value = rawValue.Trim().ToLower();
-                            if (value == "yes" || value == "y" || value == "true" || value == "1")
-                            {
-                                member.AddDuty(duty.Value);
-                                Console.WriteLine($"Added duty {duty.Key} for {member.FirstName} {member.LastName}");
-                            }
+                            // Skip duties that can't be read
                         }
-                        else
-                        {
-                            Console.WriteLine($"No value found for {duty.Key}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error reading {duty.Key}: {ex.Message}");
-                    }
-                }
+                        return null;
+                    })
+                    .Where(d => d != null)
+                    .ToList();
+                
+                // Add all assigned duties to the member
+                assignedDuties.ForEach(d => member.AddDuty(d!));
 
                 newMembers.Add(member);
             }

@@ -178,16 +178,18 @@ public class ScheduleLoaderService
 
         // Reorganize base rows into a single result, normalizing separators
         var result = baseTable.Clone();
+        var baseRows = baseTable.Rows.Cast<DataRow>().ToList();
 
-        for (int i = 0; i < baseTable.Rows.Count; i++)
+        // Process rows using indexed iteration for better performance
+        for (int i = 0; i < baseRows.Count; i++)
         {
-            var service = baseTable.Rows[i]["Service"]?.ToString() ?? string.Empty;
+            var service = baseRows[i]["Service"]?.ToString() ?? string.Empty;
 
             if (string.IsNullOrEmpty(service))
             {
                 // Keep blank row only if it's between two non-AV service rows
-                var prev = i > 0 ? baseTable.Rows[i - 1]["Service"]?.ToString() ?? string.Empty : string.Empty;
-                var next = i < baseTable.Rows.Count - 1 ? baseTable.Rows[i + 1]["Service"]?.ToString() ?? string.Empty : string.Empty;
+                var prev = i > 0 ? baseRows[i - 1]["Service"]?.ToString() ?? string.Empty : string.Empty;
+                var next = i < baseRows.Count - 1 ? baseRows[i + 1]["Service"]?.ToString() ?? string.Empty : string.Empty;
 
                 bool prevNonAV = !string.IsNullOrEmpty(prev) && !prev.StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase);
                 bool nextNonAV = !string.IsNullOrEmpty(next) && !next.StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase);
@@ -202,14 +204,13 @@ public class ScheduleLoaderService
             // Non-AV rows are copied as-is
             if (!service.StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase))
             {
-                result.ImportRow(baseTable.Rows[i]);
+                result.ImportRow(baseRows[i]);
             }
         }
 
         // If there are AV rows, ensure exactly one separator between non-AV and AV sections
-        bool hasAnyAV = baseTable.Rows.Cast<DataRow>()
-            .Any(r => (r["Service"]?.ToString() ?? string.Empty)
-                .StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase));
+        bool hasAnyAV = baseRows.Any(r => (r["Service"]?.ToString() ?? string.Empty)
+            .StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase));
 
         if (hasAnyAV && result.Rows.Count > 0)
         {
@@ -222,28 +223,30 @@ public class ScheduleLoaderService
 
         // Append AV rows with single blank row between AV service types
         string? lastAVKind = null; // Morning/Evening/Wednesday
-        foreach (DataRow row in baseTable.Rows)
-        {
-            var service = row["Service"]?.ToString() ?? string.Empty;
-            if (!service.StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase)) continue;
-
-            string avKind = service.EndsWith("Morning", StringComparison.OrdinalIgnoreCase) ? "Morning"
-                            : service.EndsWith("Evening", StringComparison.OrdinalIgnoreCase) ? "Evening"
-                            : service.EndsWith("Wednesday", StringComparison.OrdinalIgnoreCase) ? "Wednesday"
-                            : string.Empty;
-
-            if (!string.IsNullOrEmpty(lastAVKind) && avKind != lastAVKind)
+        
+        baseRows.Where(row => 
+            (row["Service"]?.ToString() ?? string.Empty).StartsWith("AudioVisual", StringComparison.OrdinalIgnoreCase))
+            .ToList()
+            .ForEach(row =>
             {
-                // Insert a single separator when service kind changes
-                if (result.Rows.Count == 0 || !string.IsNullOrEmpty(result.Rows[result.Rows.Count - 1]["Service"]?.ToString()))
-                {
-                    result.Rows.Add(result.NewRow());
-                }
-            }
+                var service = row["Service"]?.ToString() ?? string.Empty;
+                string avKind = service.EndsWith("Morning", StringComparison.OrdinalIgnoreCase) ? "Morning"
+                                : service.EndsWith("Evening", StringComparison.OrdinalIgnoreCase) ? "Evening"
+                                : service.EndsWith("Wednesday", StringComparison.OrdinalIgnoreCase) ? "Wednesday"
+                                : string.Empty;
 
-            result.ImportRow(row);
-            lastAVKind = avKind;
-        }
+                if (!string.IsNullOrEmpty(lastAVKind) && avKind != lastAVKind)
+                {
+                    // Insert a single separator when service kind changes
+                    if (result.Rows.Count == 0 || !string.IsNullOrEmpty(result.Rows[result.Rows.Count - 1]["Service"]?.ToString()))
+                    {
+                        result.Rows.Add(result.NewRow());
+                    }
+                }
+
+                result.ImportRow(row);
+                lastAVKind = avKind;
+            });
 
         // Trim any trailing blank rows
         while (result.Rows.Count > 0 && string.IsNullOrEmpty(result.Rows[result.Rows.Count - 1]["Service"]?.ToString()))

@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using MonthlyScheduler.Data;
 using MonthlyScheduler.Models;
 using MonthlyScheduler.UI;
+using MonthlyScheduler.Utilities;
+using static MonthlyScheduler.Utilities.AppStringConstants;
 
 namespace MonthlyScheduler.Forms;
 
@@ -35,7 +37,7 @@ public partial class DutyTypeForm : Form
 
     private void InitializeComponent()
     {
-        Text = _dutyType == null ? "Add Duty Type" : "Edit Duty Type";
+        Text = _dutyType == null ? FormTitleDutyTypeAdd : FormTitleDutyTypeEdit;
         Size = new Size(550, 750);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -293,14 +295,14 @@ public partial class DutyTypeForm : Form
     {
         if (string.IsNullOrWhiteSpace(nameBox.Text))
         {
-            MessageBox.Show("Please enter a name for the duty type.", "Validation Error",
+            MessageBox.Show(NameRequiredMessage, ValidationErrorTitle,
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(descriptionBox.Text))
         {
-            MessageBox.Show("Please enter a description for the duty type.", "Validation Error",
+            MessageBox.Show(DescriptionRequiredMessage, ValidationErrorTitle,
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }

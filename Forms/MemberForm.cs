@@ -1,7 +1,9 @@
 using MonthlyScheduler.Models;
 using MonthlyScheduler.Data;
 using MonthlyScheduler.UI;
+using MonthlyScheduler.Utilities;
 using Microsoft.EntityFrameworkCore;
+using static MonthlyScheduler.Utilities.AppStringConstants;
 
 namespace MonthlyScheduler.Forms;
 
@@ -21,7 +23,7 @@ public partial class MemberForm : Form
 
     private void InitializeComponent()
     {
-        Text = _member == null ? "Add New Member" : "Edit Member";
+        Text = _member == null ? FormTitleMemberAdd : FormTitleMemberEdit;
         Size = new Size(550, 800);
         MinimumSize = new Size(450, 600);
         StartPosition = FormStartPosition.CenterParent;
@@ -192,8 +194,8 @@ public partial class MemberForm : Form
         {
             if (string.IsNullOrWhiteSpace(txtFirstName.Text) || string.IsNullOrWhiteSpace(txtLastName.Text))
             {
-                MessageBox.Show("First name and last name are required.", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(FirstLastNameRequired, ValidationErrorTitle, 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

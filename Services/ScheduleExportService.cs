@@ -16,23 +16,18 @@ public class ScheduleExportService
         csv.AppendLine(title);
         csv.AppendLine();
         
-        // Add header row
-        var headers = new List<string>();
-        foreach (DataColumn column in scheduleData.Columns)
-        {
-            headers.Add(EscapeCSV(column.ColumnName));
-        }
+        // Add header row using LINQ
+        var headers = scheduleData.Columns.Cast<DataColumn>()
+            .Select(column => EscapeCSV(column.ColumnName));
         csv.AppendLine(string.Join(",", headers));
         
-        // Add data rows
-        foreach (DataRow row in scheduleData.Rows)
+        // Add data rows using LINQ
+        var dataRows = scheduleData.Rows.Cast<DataRow>()
+            .Select(row => string.Join(",", row.ItemArray.Select(item => EscapeCSV(item?.ToString() ?? string.Empty))));
+        
+        foreach (var dataRow in dataRows)
         {
-            var values = new List<string>();
-            foreach (var item in row.ItemArray)
-            {
-                values.Add(EscapeCSV(item?.ToString() ?? string.Empty));
-            }
-            csv.AppendLine(string.Join(",", values));
+            csv.AppendLine(dataRow);
         }
         
         File.WriteAllText(filePath, csv.ToString());
@@ -42,13 +37,16 @@ public class ScheduleExportService
     {
         QuestPDF.Settings.License = LicenseType.Community;
         
-        // Find Service and Duty column indices
+        // Find Service and Duty column indices using LINQ
+        const string ServiceColumn = "Service";
+        const string DutyColumn = "Duty";
+        
         var columnIndices = scheduleData.Columns.Cast<DataColumn>()
             .Select((col, index) => new { col.ColumnName, Index = index })
-            .ToList();
+            .ToDictionary(x => x.ColumnName, x => x.Index);
         
-        int serviceColumnIndex = columnIndices.FirstOrDefault(x => x.ColumnName == "Service")?.Index ?? -1;
-        int dutyColumnIndex = columnIndices.FirstOrDefault(x => x.ColumnName == "Duty")?.Index ?? -1;
+        int serviceColumnIndex = columnIndices.TryGetValue(ServiceColumn, out var serviceIdx) ? serviceIdx : -1;
+        int dutyColumnIndex = columnIndices.TryGetValue(DutyColumn, out var dutyIdx) ? dutyIdx : -1;
         
         // Split data into worship and AV assignments
         var (worshipRows, avRows) = ParseAssignmentRows(scheduleData);
