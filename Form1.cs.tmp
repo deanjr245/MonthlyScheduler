@@ -1,0 +1,14 @@
+    private async void BtnManageDutyTypes_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            using var context = new SchedulerDbContext();
+            var manageDutyTypesForm = new Forms.ManageDutyTypesForm(context);
+            manageDutyTypesForm.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error managing duty types: {ex.Message}", "Error", 
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
