@@ -46,54 +46,55 @@ public partial class Form1 : Form
         btnAddMember = new Button();
         btnManageDutyTypes = new Button();
         scheduleGrid = new DataGridView();
+        defaultWidth = 180;
 
         // Configure month selection
         monthSelect.DropDownStyle = ComboBoxStyle.DropDownList;
-        monthSelect.Width = 180;
+        monthSelect.Width = defaultWidth;
         monthSelect.Items.AddRange(System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames[..^1]); // Exclude empty 13th month
-        monthSelect.SelectedIndex = DateTime.Now.Month - 1;
+        monthSelect.SelectedIndex = DateTime.Now.Month + 1;
 
 
         // Configure year selection
-        yearSelect.Width = 180;
-        yearSelect.Minimum = 2024;
-        yearSelect.Maximum = 2030;
+        yearSelect.Width = defaultWidth;
+        yearSelect.Minimum = DateTime.Now.Year - 1;
+        yearSelect.Maximum = yearSelect.Minimum + 101;
         yearSelect.Value = DateTime.Now.Year;
 
 
         // Configure buttons
         btnUpload.Text = ButtonUploadText;
-        btnUpload.Width = 180;
+        btnUpload.Width = defaultWidth;
         btnUpload.Click += BtnUpload_Click;
         btnUpload.ApplySecondaryStyle();
 
         btnGenerateSchedule.Text = ButtonGenerateText;
-        btnGenerateSchedule.Width = 180;
+        btnGenerateSchedule.Width = defaultWidth;
         btnGenerateSchedule.Click += BtnGenerateSchedule_Click;
         btnGenerateSchedule.ApplyModernStyle();
 
         btnViewSavedSchedules.Text = ButtonViewSchedulesText;
-        btnViewSavedSchedules.Width = 180;
+        btnViewSavedSchedules.Width = defaultWidth;
         btnViewSavedSchedules.Click += BtnViewSavedSchedules_Click;
         btnViewSavedSchedules.ApplyModernStyle();
 
         btnExportMembers.Text = ButtonExportMembersText;
-        btnExportMembers.Width = 180;
+        btnExportMembers.Width = defaultWidth;
         btnExportMembers.Click += BtnExportMembers_Click;
         btnExportMembers.ApplyModernStyle();
 
         btnViewMembers.Text = ButtonViewMembersText;
-        btnViewMembers.Width = 180;
+        btnViewMembers.Width = defaultWidth;
         btnViewMembers.Click += BtnViewMembers_Click;
         btnViewMembers.ApplyModernStyle();
 
         btnAddMember.Text = ButtonAddMemberText;
-        btnAddMember.Width = 180;
+        btnAddMember.Width = defaultWidth;
         btnAddMember.Click += BtnAddMember_Click;
         btnAddMember.ApplyModernStyle();
 
         btnManageDutyTypes.Text = ButtonManageDutyTypesText;
-        btnManageDutyTypes.Width = 180;
+        btnManageDutyTypes.Width = defaultWidth;
         btnManageDutyTypes.Click += BtnManageDutyTypes_Click;
         btnManageDutyTypes.ApplyModernStyle();
 
@@ -156,24 +157,24 @@ public partial class Form1 : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 12,  // Reduced from 14 after removing export buttons
+            RowCount = 12,
             Padding = new Padding(15),
             Width = 220,
             BackColor = AppStyling.WindowBackground
         };
-        // Set up all row styles using LINQ where appropriate
+        // Set up all row styles
         leftPanel.RowStyles.Clear();
         
         // Row 0: Logo (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         
-        // Rows 1-3: Controls (AutoSize) - using LINQ
+        // Rows 1-3: Controls (AutoSize)
         Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
         
         // Row 4: Spacer between Schedule and Member buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
         
-        // Rows 5-7: Member controls (AutoSize) - using LINQ
+        // Rows 5-7: Member controls (AutoSize)
         Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
         
         // Row 8: Spacer between Member and Duty Type buttons (Absolute)
