@@ -27,7 +27,7 @@ public partial class MemberForm : Form
         Size = new Size(550, 800);
         MinimumSize = new Size(450, 600);
         StartPosition = FormStartPosition.CenterParent;
-        BackColor = AppStyling.WindowBackground;
+        BackColor = AppStyling.DarkBackground;
 
         var mainLayout = new TableLayoutPanel
         {
@@ -35,7 +35,7 @@ public partial class MemberForm : Form
             Padding = new Padding(15),
             ColumnCount = 2,
             RowCount = 2,
-            BackColor = AppStyling.Background
+            BackColor = AppStyling.LightBackground
         };
 
         mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));

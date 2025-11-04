@@ -5,7 +5,6 @@ using MonthlyScheduler.Services;
 using MonthlyScheduler.Models;
 using MonthlyScheduler.Exceptions;
 using MonthlyScheduler.UI;
-using MonthlyScheduler.Utilities;
 using static MonthlyScheduler.Utilities.AppStringConstants;
 
 namespace MonthlyScheduler;
@@ -13,7 +12,7 @@ namespace MonthlyScheduler;
 public partial class Form1 : Form
 {
     private ComboBox monthSelect = null!;
-    private NumericUpDown yearSelect = null!;
+    private ComboBox yearSelect = null!;
     private Button btnUpload = null!;
     private Button btnGenerateSchedule = null!;
     private Button btnViewSavedSchedules = null!;
@@ -22,7 +21,7 @@ public partial class Form1 : Form
     private Button btnAddMember = null!;
     private Button btnManageDutyTypes = null!;
     private DataGridView scheduleGrid = null!;
-    private Label lblScheduleTitle = null!;
+    private int NumberOfYearsToShow = 10;
 
     public Form1()
     {
@@ -37,7 +36,7 @@ public partial class Form1 : Form
     {
         // Initialize all controls
         monthSelect = new ComboBox();
-        yearSelect = new NumericUpDown();
+        yearSelect = new ComboBox();
         btnUpload = new Button();
         btnGenerateSchedule = new Button();
         btnViewSavedSchedules = new Button();
@@ -46,68 +45,60 @@ public partial class Form1 : Form
         btnAddMember = new Button();
         btnManageDutyTypes = new Button();
         scheduleGrid = new DataGridView();
-        defaultWidth = 180;
 
         // Configure month selection
         monthSelect.DropDownStyle = ComboBoxStyle.DropDownList;
-        monthSelect.Width = defaultWidth;
+        monthSelect.Dock = DockStyle.Fill;
+        monthSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2);
         monthSelect.Items.AddRange(System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames[..^1]); // Exclude empty 13th month
-        monthSelect.SelectedIndex = DateTime.Now.Month + 1;
-
+        monthSelect.SelectedIndex = DateTime.Now.Month % 12; // Next month (wraps December to January)
 
         // Configure year selection
-        yearSelect.Width = defaultWidth;
-        yearSelect.Minimum = DateTime.Now.Year - 1;
-        yearSelect.Maximum = yearSelect.Minimum + 101;
-        yearSelect.Value = DateTime.Now.Year;
-
+        yearSelect.DropDownStyle = ComboBoxStyle.DropDownList;
+        yearSelect.Dock = DockStyle.Fill;
+        yearSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2);
+        var startYear = DateTime.Now.Year - 1;
+        for (int i = 0; i <= NumberOfYearsToShow; i++)
+        {
+            yearSelect.Items.Add(startYear + i);
+        }
+        yearSelect.SelectedItem = DateTime.Now.Year;
 
         // Configure buttons
         btnUpload.Text = ButtonUploadText;
-        btnUpload.Width = defaultWidth;
+        btnUpload.Dock = DockStyle.Fill;
         btnUpload.Click += BtnUpload_Click;
         btnUpload.ApplySecondaryStyle();
 
         btnGenerateSchedule.Text = ButtonGenerateText;
-        btnGenerateSchedule.Width = defaultWidth;
+        btnGenerateSchedule.Dock = DockStyle.Fill;
         btnGenerateSchedule.Click += BtnGenerateSchedule_Click;
         btnGenerateSchedule.ApplyModernStyle();
 
         btnViewSavedSchedules.Text = ButtonViewSchedulesText;
-        btnViewSavedSchedules.Width = defaultWidth;
+        btnViewSavedSchedules.Dock = DockStyle.Fill;
         btnViewSavedSchedules.Click += BtnViewSavedSchedules_Click;
         btnViewSavedSchedules.ApplyModernStyle();
 
         btnExportMembers.Text = ButtonExportMembersText;
-        btnExportMembers.Width = defaultWidth;
+        btnExportMembers.Dock = DockStyle.Fill;
         btnExportMembers.Click += BtnExportMembers_Click;
         btnExportMembers.ApplyModernStyle();
 
         btnViewMembers.Text = ButtonViewMembersText;
-        btnViewMembers.Width = defaultWidth;
+        btnViewMembers.Dock = DockStyle.Fill;
         btnViewMembers.Click += BtnViewMembers_Click;
         btnViewMembers.ApplyModernStyle();
 
         btnAddMember.Text = ButtonAddMemberText;
-        btnAddMember.Width = defaultWidth;
+        btnAddMember.Dock = DockStyle.Fill;
         btnAddMember.Click += BtnAddMember_Click;
         btnAddMember.ApplyModernStyle();
 
         btnManageDutyTypes.Text = ButtonManageDutyTypesText;
-        btnManageDutyTypes.Width = defaultWidth;
+        btnManageDutyTypes.Dock = DockStyle.Fill;
         btnManageDutyTypes.Click += BtnManageDutyTypes_Click;
         btnManageDutyTypes.ApplyModernStyle();
-
-        // Configure schedule title
-        lblScheduleTitle = new Label
-        {
-            AutoSize = true,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(0, 0, 0, 10),
-            Visible = false
-        };
-        lblScheduleTitle.ApplyModernStyle();
-        lblScheduleTitle.Font = new Font(lblScheduleTitle.Font.FontFamily, 16, FontStyle.Bold);
 
         // Configure main grid
         scheduleGrid.Dock = DockStyle.Fill;
@@ -149,7 +140,7 @@ public partial class Form1 : Form
             ColumnCount = 2,
             RowCount = 1,
             Padding = new Padding(20),
-            BackColor = AppStyling.WindowBackground
+            BackColor = AppStyling.DarkBackground
         };
 
         // Left panel setup
@@ -160,7 +151,7 @@ public partial class Form1 : Form
             RowCount = 12,
             Padding = new Padding(15),
             Width = 220,
-            BackColor = AppStyling.WindowBackground
+            BackColor = AppStyling.DarkBackground
         };
         // Set up all row styles
         leftPanel.RowStyles.Clear();
@@ -195,38 +186,41 @@ public partial class Form1 : Form
         {
             Dock = DockStyle.Fill,
             Margin = new Padding(0, 0, 0, 20),
-            BackColor = AppStyling.WindowBackground
+            BackColor = AppStyling.DarkBackground
         };
 
         var logoPictureBox = new PictureBox
         {
             Image = Image.FromFile("../../../Assets/RiceRoadLogo.png"),
             SizeMode = PictureBoxSizeMode.Zoom,
-            Dock = DockStyle.Fill
+            Dock = DockStyle.Fill,
+            BackColor = AppStyling.LightBackground
         };
         logoPanel.Controls.Add(logoPictureBox);
 
         // Month/Year selection panel
-        var monthYearPanel = new FlowLayoutPanel
+        var monthYearPanel = new TableLayoutPanel
         {
-            FlowDirection = FlowDirection.TopDown,
-            AutoSize = true,
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
             Margin = new Padding(0, 0, 0, 20),
-            BackColor = AppStyling.WindowBackground
+            BackColor = AppStyling.DarkBackground,
+            AutoSize = true
         };
 
-        var monthLabel = new Label { Text = LabelSelectMonth, AutoSize = true };
-        monthLabel.ApplyModernStyle();
-        var yearLabel = new Label { Text = LabelSelectYear, AutoSize = true };
-        yearLabel.ApplyModernStyle();
+        monthYearPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Month label
+        monthYearPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Month select
+        monthYearPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Year label
+        monthYearPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Year select
 
-        monthYearPanel.Controls.AddRange(
-        [
-            monthLabel,
-            monthSelect,
-            yearLabel,
-            yearSelect
-        ]);
+        var monthLabel = new Label { Text = LabelSelectMonth, AutoSize = true, Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2), ForeColor = AppStyling.LightText, Margin = new Padding(0, 0, 0, 5) };
+        var yearLabel = new Label { Text = LabelSelectYear, AutoSize = true, Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2), ForeColor = AppStyling.LightText, Margin = new Padding(0, 10, 0, 5) };
+
+        monthYearPanel.Controls.Add(monthLabel, 0, 0);
+        monthYearPanel.Controls.Add(monthSelect, 0, 1);
+        monthYearPanel.Controls.Add(yearLabel, 0, 2);
+        monthYearPanel.Controls.Add(yearSelect, 0, 3);
 
         // Set row styles for the logo
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 100)); // Height for logo
@@ -254,7 +248,7 @@ public partial class Form1 : Form
         var rightPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            BackColor = AppStyling.WindowBackground,
+            BackColor = AppStyling.DarkBackground,
             Padding = new Padding(0),
             Margin = new Padding(0),
             ColumnCount = 1,
@@ -266,11 +260,9 @@ public partial class Form1 : Form
         rightPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // Grid
 
         // Configure control properties
-        lblScheduleTitle.Margin = new Padding(1, 1, 1, 0);
         scheduleGrid.Margin = new Padding(0);
 
-        // Add controls
-        rightPanel.Controls.Add(lblScheduleTitle, 0, 0);
+        // Add grid to right panel
         rightPanel.Controls.Add(scheduleGrid, 0, 1);
 
         // Configure and add panels to main layout with fixed left panel width
@@ -290,7 +282,22 @@ public partial class Form1 : Form
         const string ImportCompleteTitle = "Import Complete";
         const string ErrorTitle = "Error";
         const string ImportErrorMessage = "Error importing data: {0}";
+        const string WarningTitle = "Warning";
+        const string WarningMessage = "Only use this if you know what you're doing! Will override database!";
         
+        // Show warning confirmation dialog
+        var confirmResult = MessageBox.Show(
+            WarningMessage,
+            WarningTitle,
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Warning);
+
+        // If user cancels, exit without proceeding
+        if (confirmResult != DialogResult.OK)
+        {
+            return;
+        }
+
         using OpenFileDialog openFileDialog = new()
         {
             Filter = CsvFilter,
@@ -325,11 +332,11 @@ public partial class Form1 : Form
         try
         {
             var selectedMonth = monthSelect.SelectedIndex + 1; // Adding 1 because SelectedIndex is 0-based
-            var selectedYear = (int)yearSelect.Value;
+            var selectedYear = (int)yearSelect.SelectedItem!;
 
             using var context = new SchedulerDbContext();
             var scheduleService = new ScheduleService(context);
-            var (schedule, storedSchedule) = await scheduleService.GenerateMonthlySchedule(selectedYear, selectedMonth);
+            _ = await scheduleService.GenerateMonthlySchedule(selectedYear, selectedMonth);
 
             await ConfigureGrid(selectedYear, selectedMonth, context);
 
@@ -343,6 +350,21 @@ public partial class Form1 : Form
 
     private void ClearAndSetupGrid(bool forMembers = false)
     {
+        // Clear any existing title labels from the right panel
+        var mainLayout = (TableLayoutPanel)Controls[0];
+        var rightPanel = (TableLayoutPanel)mainLayout.Controls[1];
+        
+        // Remove all labels from position (0, 0) in the right panel
+        var controlsToRemove = rightPanel.Controls.Cast<Control>()
+            .Where(c => c is Label && rightPanel.GetRow(c) == 0)
+            .ToList();
+        
+        foreach (var control in controlsToRemove)
+        {
+            rightPanel.Controls.Remove(control);
+            control.Dispose();
+        }
+
         scheduleGrid.SuspendLayout();
         try
         {
@@ -350,16 +372,13 @@ public partial class Form1 : Form
             scheduleGrid.Columns.Clear();
             scheduleGrid.ApplyModernStyle();
 
-            // Hide title for member view, show for schedule view
-            lblScheduleTitle.Visible = !forMembers;
-
             // Remove selection highlighting but enable hover effect
             scheduleGrid.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
             scheduleGrid.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
             
             // Set hover style for all rows
             scheduleGrid.RowsDefaultCellStyle.BackColor = Color.White;
-            scheduleGrid.RowsDefaultCellStyle.ForeColor = AppStyling.Text;
+            scheduleGrid.RowsDefaultCellStyle.ForeColor = AppStyling.DarkText;
 
             if (forMembers)
             {
@@ -393,17 +412,15 @@ public partial class Form1 : Form
             using var context = new SchedulerDbContext();
 
             // Load all data asynchronously
-            var members = await context.Members
+            var members = context.Members
                 .Include(m => m.AvailableDuties)
                 .OrderBy(m => m.ExcludeFromScheduling)
                 .ThenBy(m => m.LastName)
-                .ThenBy(m => m.FirstName)
-                .ToListAsync();
+                .ThenBy(m => m.FirstName);
 
-            var duties = await context.DutyTypes
+            var duties = context.DutyTypes
                 .OrderBy(dt => dt.Category)
-                .ThenBy(dt => dt.Name)
-                .ToListAsync();
+                .ThenBy(dt => dt.Name);
 
             // Use DataTable instead of dynamic types - much faster
             var dataTable = new DataTable();
@@ -428,19 +445,22 @@ public partial class Form1 : Form
             dataTable.BeginLoadData(); // Disable constraints and notifications during load
             
             // Process members using optimized approach
-            members.ForEach(member =>
+            foreach(var member in members)
             {
                 var row = dataTable.NewRow();
                 row[ColumnLastNameText] = member.LastName;
                 row[ColumnFirstNameText] = member.FirstName;
                 row[ColumnFormReceivedText] = member.HasSubmittedForm ? YesText : NoText;
-                
+
                 var dutyIds = memberDutyLookup[member.Id];
-                duties.ForEach(duty => row[duty.Name] = dutyIds.Contains(duty.Id) ? YesText : string.Empty);
+                foreach (var duty in duties)
+                {
+                    row[duty.Name] = dutyIds.Contains(duty.Id) ? YesText : string.Empty;
+                }
                 
                 row[ColumnExcludedText] = member.ExcludeFromScheduling ? YesText : NoText;
                 dataTable.Rows.Add(row);
-            });
+            };
             
             dataTable.EndLoadData();
 
@@ -453,6 +473,10 @@ public partial class Form1 : Form
             {
                 // Bind data first
                 scheduleGrid.DataSource = dataTable;
+
+                // Increase column header height to prevent text cutoff
+                scheduleGrid.ColumnHeadersHeight = 65;
+                scheduleGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
                 // Add Edit and Delete button columns at the FRONT by inserting
                 var editBtn = new DataGridViewButtonColumn
@@ -781,7 +805,7 @@ public partial class Form1 : Form
 
                 // Parse column date with current year and month from the schedule
                 var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
-                var year = (int)yearSelect.Value;
+                var year = (int)yearSelect.SelectedItem!;
                 var month = monthSelect.SelectedIndex + 1;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
                 
@@ -805,7 +829,7 @@ public partial class Form1 : Form
             if (assignmentForm.ShowDialog() == DialogResult.OK && assignmentForm.SelectedMember != null)
             {
                 var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
-                var year = (int)yearSelect.Value;
+                var year = (int)yearSelect.SelectedItem!;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
 
                 // Update the grid cell
@@ -885,7 +909,7 @@ public partial class Form1 : Form
 
                 // Set the month/year selectors to match the loaded schedule
                 monthSelect.SelectedIndex = schedule.Month - 1;
-                yearSelect.Value = schedule.Year;
+                yearSelect.SelectedItem = schedule.Year;
 
                 await ConfigureGrid(schedule.Year, schedule.Month, context);
             }
@@ -902,8 +926,23 @@ public partial class Form1 : Form
         // Clear and setup grids for schedule view
         ClearAndSetupGrid(forMembers: false);
 
+        var lblScheduleTitle = new Label
+        {
+            AutoSize = true,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(0, 0, 0, 10),
+            Margin = new Padding(1, 1, 1, 0),
+            Font = new Font(AppStyling.Font.FontFamily, 16, FontStyle.Bold)
+        };
+        
+        // Find the right panel and add the label to it
+        var mainLayout = (TableLayoutPanel)Controls[0];
+        var rightPanel = (TableLayoutPanel)mainLayout.Controls[1];
+        rightPanel.Controls.Add(lblScheduleTitle, 0, 0);
+
         // Update titles
         lblScheduleTitle.Text = $"{monthSelect.Text} {year}";
+        lblScheduleTitle.ForeColor = AppStyling.LightText;
         lblScheduleTitle.Visible = true;
 
         // Load schedule data

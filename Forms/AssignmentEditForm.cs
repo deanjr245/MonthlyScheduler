@@ -19,7 +19,7 @@ public class AssignmentEditForm : Form
         Text = $"Edit {dutyType.Name} Assignment";
         Size = new Size(400, 200);
         StartPosition = FormStartPosition.CenterParent;
-        BackColor = AppStyling.Background;
+        BackColor = AppStyling.LightBackground;
 
         var mainLayout = new TableLayoutPanel
         {

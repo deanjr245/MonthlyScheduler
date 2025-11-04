@@ -35,7 +35,7 @@ public static class ControlExtensions
         grid.RowsDefaultCellStyle.BackColor = Color.White;
         grid.BackgroundColor = Color.White;
         grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
-        grid.DefaultCellStyle.SelectionForeColor = AppStyling.Text;
+        grid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
         grid.DefaultCellStyle.ForeColor = Color.FromArgb(33, 37, 41);
         grid.RowsDefaultCellStyle.Padding = new Padding(3);
         grid.DefaultCellStyle.Font = AppStyling.Font;
@@ -75,12 +75,12 @@ public static class ControlExtensions
     public static void ApplyModernStyle(this Label label)
     {
         label.Font = AppStyling.Font;
-        label.ForeColor = AppStyling.Text;
+        label.ForeColor = AppStyling.DarkText;
     }
 
     public static void ApplyModernStyle(this Panel panel)
     {
-        panel.BackColor = AppStyling.WindowBackground;
+        panel.BackColor = AppStyling.DarkBackground;
         panel.BorderStyle = BorderStyle.None;
     }
 }

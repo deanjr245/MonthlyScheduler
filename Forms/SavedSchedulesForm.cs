@@ -25,7 +25,7 @@ public class SavedSchedulesForm : Form
         Text = "Saved Schedules";
         Size = new Size(800, 600);
         StartPosition = FormStartPosition.CenterParent;
-        BackColor = AppStyling.WindowBackground;
+        BackColor = AppStyling.LightBackground;
         
         // Add a delete button and manage its state
         _btnDelete = new Button
@@ -65,7 +65,7 @@ public class SavedSchedulesForm : Form
         _schedulesGrid.RowHeadersVisible = false;
         _schedulesGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _schedulesGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
-        _schedulesGrid.DefaultCellStyle.SelectionForeColor = AppStyling.Text;
+        _schedulesGrid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
         _schedulesGrid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
         _schedulesGrid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
 
@@ -137,8 +137,7 @@ public class SavedSchedulesForm : Form
                     s.Id,
                     Month = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(s.Month),
                     s.Year,
-                    Generated = s.GeneratedDate,
-                    s.Notes
+                    Generated = s.GeneratedDate
                 })
                 .ToListAsync();
 

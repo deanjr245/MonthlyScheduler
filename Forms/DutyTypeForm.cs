@@ -18,6 +18,7 @@ public partial class DutyTypeForm : Form
     private CheckBox eveningCheck = null!;
     private CheckBox wednesdayCheck = null!;
     private CheckBox exemptFromServiceMaxCheck = null!;
+    private CheckBox skipLastSundayEveningCheck = null!;
     private CheckBox manuallyScheduledCheck = null!;
     private ComboBox manualAssignmentTypeCombo = null!;
     private CheckBox monthlyDutyCheck = null!;
@@ -38,7 +39,7 @@ public partial class DutyTypeForm : Form
     private void InitializeComponent()
     {
         Text = _dutyType == null ? FormTitleDutyTypeAdd : FormTitleDutyTypeEdit;
-        Size = new Size(550, 750);
+        Size = new Size(550, 780);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -84,6 +85,9 @@ public partial class DutyTypeForm : Form
         exemptFromServiceMaxCheck = new CheckBox { Text = "Exempt from Service Maximum", AutoSize = true, MaximumSize = new Size(450, 0) };
         exemptFromServiceMaxCheck.Font = AppStyling.Font;
 
+        skipLastSundayEveningCheck = new CheckBox { Text = "Skip Last Sunday Evening", AutoSize = true, MaximumSize = new Size(450, 0) };
+        skipLastSundayEveningCheck.Font = AppStyling.Font;
+
         manuallyScheduledCheck = new CheckBox { Text = "Include but don't schedule", AutoSize = true, MaximumSize = new Size(450, 0) };
         manuallyScheduledCheck.Font = AppStyling.Font;
         manuallyScheduledCheck.CheckedChanged += ManuallyScheduledCheck_CheckedChanged;
@@ -98,7 +102,7 @@ public partial class DutyTypeForm : Form
         manualAssignmentTypeCombo.SelectedIndex = 0;
         manualAssignmentTypeCombo.ApplyModernStyle();
 
-        monthlyDutyCheck = new CheckBox { Text = "Monthly Duty (not tied to a specific service)", AutoSize = true, MaximumSize = new Size(450, 0) };
+        monthlyDutyCheck = new CheckBox { Text = "Monthly Duty", AutoSize = true, MaximumSize = new Size(450, 0) };
         monthlyDutyCheck.Font = AppStyling.Font;
         monthlyDutyCheck.CheckedChanged += MonthlyDutyCheck_CheckedChanged;
 
@@ -145,7 +149,7 @@ public partial class DutyTypeForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(8),
             AutoSize = true,
-            MinimumSize = new Size(0, 150)
+            MinimumSize = new Size(0, 180)
         };
         var servicesLayout = new FlowLayoutPanel
         {
@@ -158,6 +162,7 @@ public partial class DutyTypeForm : Form
         servicesLayout.Controls.Add(eveningCheck);
         servicesLayout.Controls.Add(wednesdayCheck);
         servicesLayout.Controls.Add(exemptFromServiceMaxCheck);
+        servicesLayout.Controls.Add(skipLastSundayEveningCheck);
         servicesLayout.Controls.Add(manuallyScheduledCheck);
         
         var manualAssignmentPanel = new FlowLayoutPanel
@@ -248,6 +253,7 @@ public partial class DutyTypeForm : Form
             eveningCheck.Checked = _dutyType.IsEveningDuty;
             wednesdayCheck.Checked = _dutyType.IsWednesdayDuty;
             exemptFromServiceMaxCheck.Checked = _dutyType.ExemptFromServiceMax;
+            skipLastSundayEveningCheck.Checked = _dutyType.SkipLastSundayEvening;
             manuallyScheduledCheck.Checked = _dutyType.ManuallyScheduled;
             
             if (_dutyType.ManuallyScheduled && _dutyType.ManualAssignmentType.HasValue)
@@ -272,23 +278,6 @@ public partial class DutyTypeForm : Form
     private void MonthlyDutyCheck_CheckedChanged(object? sender, EventArgs e)
     {
         monthlyDutyFrequencyCombo.Enabled = monthlyDutyCheck.Checked;
-        
-        // When monthly duty is checked, disable service checkboxes
-        if (monthlyDutyCheck.Checked)
-        {
-            morningCheck.Checked = false;
-            morningCheck.Enabled = false;
-            eveningCheck.Checked = false;
-            eveningCheck.Enabled = false;
-            wednesdayCheck.Checked = false;
-            wednesdayCheck.Enabled = false;
-        }
-        else
-        {
-            morningCheck.Enabled = true;
-            eveningCheck.Enabled = true;
-            wednesdayCheck.Enabled = true;
-        }
     }
 
     private async void SaveButton_Click(object? sender, EventArgs e)
@@ -316,10 +305,16 @@ public partial class DutyTypeForm : Form
                     ? (DutyCategory)Enum.Parse(typeof(DutyCategory), category) 
                     : DutyCategory.Worship;
 
-                // Find the max OrderIndex for this category and set the new one to max + 1
-                var maxOrderIndex = await _context.DutyTypes
-                    .Where(dt => dt.Category == selectedCategory)
-                    .MaxAsync(dt => (int?)dt.OrderIndex) ?? -1;
+                // Find the max OrderIndex for each service and set the new one to max + 1
+                var maxOrderIndexAM = await _context.DutyTypes
+                    .Where(dt => dt.Category == selectedCategory && dt.IsMorningDuty)
+                    .MaxAsync(dt => (int?)dt.OrderIndexAM) ?? -1;
+                var maxOrderIndexPM = await _context.DutyTypes
+                    .Where(dt => dt.Category == selectedCategory && dt.IsEveningDuty)
+                    .MaxAsync(dt => (int?)dt.OrderIndexPM) ?? -1;
+                var maxOrderIndexWed = await _context.DutyTypes
+                    .Where(dt => dt.Category == selectedCategory && dt.IsWednesdayDuty)
+                    .MaxAsync(dt => (int?)dt.OrderIndexWednesday) ?? -1;
 
                 // Create new duty type
                 var dutyType = new DutyType
@@ -330,7 +325,11 @@ public partial class DutyTypeForm : Form
                     IsMorningDuty = morningCheck.Checked,
                     IsEveningDuty = eveningCheck.Checked,
                     IsWednesdayDuty = wednesdayCheck.Checked,
+                    OrderIndexAM = maxOrderIndexAM + 1,
+                    OrderIndexPM = maxOrderIndexPM + 1,
+                    OrderIndexWednesday = maxOrderIndexWed + 1,
                     ExemptFromServiceMax = exemptFromServiceMaxCheck.Checked,
+                    SkipLastSundayEvening = skipLastSundayEveningCheck.Checked,
                     ManuallyScheduled = manuallyScheduledCheck.Checked,
                     ManualAssignmentType = manuallyScheduledCheck.Checked 
                         ? (Models.ManualAssignmentType)manualAssignmentTypeCombo.SelectedIndex 
@@ -338,8 +337,7 @@ public partial class DutyTypeForm : Form
                     IsMonthlyDuty = monthlyDutyCheck.Checked,
                     MonthlyDutyFrequency = monthlyDutyCheck.Checked 
                         ? (MonthlyDutyFrequency)monthlyDutyFrequencyCombo.SelectedIndex 
-                        : null,
-                    OrderIndex = maxOrderIndex + 1
+                        : null
                 };
 
                 _context.DutyTypes.Add(dutyType);
@@ -354,6 +352,7 @@ public partial class DutyTypeForm : Form
                 _dutyType.IsEveningDuty = eveningCheck.Checked;
                 _dutyType.IsWednesdayDuty = wednesdayCheck.Checked;
                 _dutyType.ExemptFromServiceMax = exemptFromServiceMaxCheck.Checked;
+                _dutyType.SkipLastSundayEvening = skipLastSundayEveningCheck.Checked;
                 _dutyType.ManuallyScheduled = manuallyScheduledCheck.Checked;
                 _dutyType.ManualAssignmentType = manuallyScheduledCheck.Checked 
                     ? (Models.ManualAssignmentType)manualAssignmentTypeCombo.SelectedIndex 

@@ -104,13 +104,22 @@ public class DutyOrderForm : Form
     {
         try
         {
-            var duties = await _context.DutyTypes
-                .Where(d => d.Category == _category && 
-                           (_serviceType == ServiceType.Sunday_AM && d.IsMorningDuty ||
-                            _serviceType == ServiceType.Sunday_PM && d.IsEveningDuty ||
-                            _serviceType == ServiceType.Wednesday && d.IsWednesdayDuty))
-                .OrderBy(d => d.OrderIndex)
-                .ToListAsync();
+            var duties = _serviceType switch
+            {
+                ServiceType.Sunday_AM => await _context.DutyTypes
+                    .Where(d => d.Category == _category && d.IsMorningDuty)
+                    .OrderBy(d => d.OrderIndexAM)
+                    .ToListAsync(),
+                ServiceType.Sunday_PM => await _context.DutyTypes
+                    .Where(d => d.Category == _category && d.IsEveningDuty)
+                    .OrderBy(d => d.OrderIndexPM)
+                    .ToListAsync(),
+                ServiceType.Wednesday => await _context.DutyTypes
+                    .Where(d => d.Category == _category && d.IsWednesdayDuty)
+                    .OrderBy(d => d.OrderIndexWednesday)
+                    .ToListAsync(),
+                _ => new List<DutyType>()
+            };
 
             _duties.Clear();
             _duties.AddRange(duties);
@@ -170,25 +179,29 @@ public class DutyOrderForm : Form
             _duties[index1] = _duties[index2];
             _duties[index2] = temp;
 
-            // Update the order indices immediately
-            var orderBase = _serviceType switch
+            // Update OrderIndex values for all duties based on their new positions
+            for (int i = 0; i < _duties.Count; i++)
             {
-                ServiceType.Sunday_AM => 1000,
-                ServiceType.Sunday_PM => 2000,
-                ServiceType.Wednesday => 3000,
-                _ => 0
-            };
-
-            // Get fresh references to the duties we're updating
-            var duty1 = await _context.DutyTypes.FindAsync(_duties[index1].Id);
-            var duty2 = await _context.DutyTypes.FindAsync(_duties[index2].Id);
-
-            if (duty1 != null && duty2 != null)
-            {
-                duty1.OrderIndex = orderBase + index1;
-                duty2.OrderIndex = orderBase + index2;
-                await _context.SaveChangesAsync();
+                var duty = await _context.DutyTypes.FindAsync(_duties[i].Id);
+                if (duty != null)
+                {
+                    // Set the appropriate OrderIndex value based on service type
+                    switch (_serviceType)
+                    {
+                        case ServiceType.Sunday_AM:
+                            duty.OrderIndexAM = i;
+                            break;
+                        case ServiceType.Sunday_PM:
+                            duty.OrderIndexPM = i;
+                            break;
+                        case ServiceType.Wednesday:
+                            duty.OrderIndexWednesday = i;
+                            break;
+                    }
+                }
             }
+            
+            await _context.SaveChangesAsync();
 
             var selectedDuty = _duties[index2];
             _dutyList.DataSource = null;

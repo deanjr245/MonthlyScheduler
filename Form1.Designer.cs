@@ -29,7 +29,7 @@ partial class Form1
     private void InitializeComponent()
     {
         monthSelect = new ComboBox();
-        yearSelect = new NumericUpDown();
+        yearSelect = new ComboBox();
         btnUpload = new Button();
         btnGenerateSchedule = new Button();
         scheduleGrid = new DataGridView();

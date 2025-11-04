@@ -9,12 +9,15 @@ public class DutyType
     public bool IsMorningDuty { get; set; }
     public bool IsEveningDuty { get; set; }
     public bool IsWednesdayDuty { get; set; }
-    public int OrderIndex { get; set; }
+    public int OrderIndexAM { get; set; }
+    public int OrderIndexPM { get; set; }
+    public int OrderIndexWednesday { get; set; }
     public bool ExemptFromServiceMax { get; set; }
     public bool ManuallyScheduled { get; set; }
     public ManualAssignmentType? ManualAssignmentType { get; set; }
     public bool IsMonthlyDuty { get; set; }
     public MonthlyDutyFrequency? MonthlyDutyFrequency { get; set; }
+    public bool SkipLastSundayEvening { get; set; }
 
     // Navigation properties
     public List<MemberDuty> MemberDuties { get; set; } = new();

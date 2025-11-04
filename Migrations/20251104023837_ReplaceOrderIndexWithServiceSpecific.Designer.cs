@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MonthlyScheduler.Data;
 
@@ -10,9 +11,11 @@ using MonthlyScheduler.Data;
 namespace MonthlyScheduler.Migrations
 {
     [DbContext(typeof(SchedulerDbContext))]
-    partial class SchedulerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251104023837_ReplaceOrderIndexWithServiceSpecific")]
+    partial class ReplaceOrderIndexWithServiceSpecific
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -113,9 +116,6 @@ namespace MonthlyScheduler.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("OrderIndexWednesday")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("SkipLastSundayEvening")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

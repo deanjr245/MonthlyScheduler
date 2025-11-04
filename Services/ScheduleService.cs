@@ -14,7 +14,7 @@ public class ScheduleService
         _context = context;
     }
 
-    public async Task<(List<WeeklySchedule> Schedule, GeneratedSchedule StoredSchedule)> GenerateMonthlySchedule(int year, int month)
+    public async Task<GeneratedSchedule> GenerateMonthlySchedule(int year, int month)
     {
         // Get all active members
         var members = await _context.Members
@@ -31,13 +31,25 @@ public class ScheduleService
         var weeklySchedules = new List<WeeklySchedule>();
         var monthlyAssignments = new Dictionary<(int DutyId, ServiceType Service), HashSet<Member>>();
         var memberWeeklyAssignments = new Dictionary<DateTime, HashSet<Member>>();
-        var dutyTypes = await _context.DutyTypes.ToListAsync();
+        var dutyTypes = await _context.DutyTypes.AsNoTracking().ToListAsync();
+
+        // Pre-filter duty types by service to avoid repeated filtering in the loop
+        var morningDuties = dutyTypes.Where(dt => dt.IsMorningDuty).OrderBy(dt => dt.OrderIndexAM).ToList();
+        var eveningDuties = dutyTypes.Where(dt => dt.IsEveningDuty).OrderBy(dt => dt.OrderIndexPM).ToList();
+        var wednesdayDuties = dutyTypes.Where(dt => dt.IsWednesdayDuty).OrderBy(dt => dt.OrderIndexWednesday).ToList();
+        
+        // Service-independent monthly duties (not assigned to any specific service)
+        var serviceIndependentMonthlyDuties = dutyTypes
+            .Where(dt => dt.IsMonthlyDuty && !dt.IsMorningDuty && !dt.IsEveningDuty && !dt.IsWednesdayDuty)
+            .OrderBy(dt => dt.Category)
+            .ThenBy(dt => dt.OrderIndexPM)
+            .ToList();
 
         // Initialize member monthly counts using LINQ
         var memberMonthlyCount = members.ToDictionary(m => m, m => 0);
         
         // Initialize monthly assignment tracking using LINQ
-        var serviceTypes = new[] { ServiceType.Sunday_AM, ServiceType.Sunday_PM, ServiceType.Wednesday };
+        var serviceTypes = new[] { ServiceType.Sunday_AM, ServiceType.Sunday_PM, ServiceType.Wednesday, ServiceType.Monthly };
         dutyTypes.SelectMany(duty => serviceTypes.Select(service => (duty.Id, service)))
             .ToList()
             .ForEach(key => monthlyAssignments[key] = new HashSet<Member>());
@@ -53,12 +65,13 @@ public class ScheduleService
             
             // Create Sunday schedule
             var sundaySchedule = new Schedule(sundayDate);
-            await AssignDuties(sundaySchedule.AMDuties, members, monthlyAssignments, ServiceType.Sunday_AM,
-                await _context.DutyTypes.Where(dt => dt.IsMorningDuty).OrderBy(dt => dt.OrderIndex).ToListAsync(),
-                memberMonthlyCount, memberWeeklyAssignments, sundayDate);
-            await AssignDuties(sundaySchedule.PMDuties, members, monthlyAssignments, ServiceType.Sunday_PM,
-                await _context.DutyTypes.Where(dt => dt.IsEveningDuty).OrderBy(dt => dt.OrderIndex).ToListAsync(),
-                memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+            AssignDuties(sundaySchedule.AMDuties, members, monthlyAssignments, ServiceType.Sunday_AM,
+                morningDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+            
+            // Check if this is the last Sunday evening
+            var isLastSunday = sundayDate.Date == lastSunday.Date;
+            AssignDuties(sundaySchedule.PMDuties, members, monthlyAssignments, ServiceType.Sunday_PM,
+                eveningDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate, isLastSunday);
             weeklySchedule.SundaySchedule = sundaySchedule;
 
             // Create Wednesday schedule - include it if the week starts in our target month
@@ -66,10 +79,16 @@ public class ScheduleService
             if (sundayDate.Month == month)
             {
                 var wednesdaySchedule = new Schedule(wednesdayDate);
-                await AssignDuties(wednesdaySchedule.WednesdayDuties, members, monthlyAssignments, ServiceType.Wednesday,
-                    await _context.DutyTypes.Where(dt => dt.IsWednesdayDuty).OrderBy(dt => dt.OrderIndex).ToListAsync(),
-                    memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+                AssignDuties(wednesdaySchedule.WednesdayDuties, members, monthlyAssignments, ServiceType.Wednesday,
+                    wednesdayDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
                 weeklySchedule.WednesdaySchedule = wednesdaySchedule;
+            }
+
+            // Assign service-independent monthly duties to the Sunday schedule
+            if (serviceIndependentMonthlyDuties.Any())
+            {
+                AssignDuties(sundaySchedule.MonthlyDuties, members, monthlyAssignments, ServiceType.Monthly,
+                    serviceIndependentMonthlyDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
             }
 
             weeklySchedules.Add(weeklySchedule);
@@ -132,6 +151,22 @@ public class ScheduleService
                     dailySchedule.Assignments.Add(pmAssignment);
                 }
 
+                // Add service-independent monthly duties
+                foreach (var (dutyType, member) in weekSchedule.SundaySchedule.MonthlyDuties)
+                {
+                    // Skip null members (manually scheduled duties)
+                    if (member == null) continue;
+
+                    var monthlyAssignment = new ScheduleAssignment
+                    {
+                        MemberId = member.Id,
+                        DutyTypeId = dutyType.Id,
+                        ServiceType = ServiceType.Monthly,
+                        DailyScheduleId = dailySchedule.Id
+                    };
+                    dailySchedule.Assignments.Add(monthlyAssignment);
+                }
+
                 generatedSchedule.DailySchedules.Add(dailySchedule);
             }
 
@@ -168,41 +203,50 @@ public class ScheduleService
         await _context.GeneratedSchedules.AddAsync(generatedSchedule);
         await _context.SaveChangesAsync();
 
-        return (weeklySchedules, generatedSchedule);
+        return generatedSchedule;
     }
 
-    private Task AssignDuties(Dictionary<DutyType, Member> duties, List<Member> members, 
+    private void AssignDuties(Dictionary<DutyType, Member> duties, List<Member> members, 
         Dictionary<(int DutyId, ServiceType Service), HashSet<Member>> monthlyAssignments,
         ServiceType serviceType, List<DutyType> dutyTypes,
         Dictionary<Member, int> memberMonthlyCount,
         Dictionary<DateTime, HashSet<Member>> memberWeeklyAssignments,
-        DateTime weekStartDate)
+        DateTime weekStartDate, bool isLastSundayEvening = false)
     {
         // Keep track of members already assigned to this service
         var assignedToService = new HashSet<Member>();
 
-        bool IsSpecialLastSundayDuty(DutyType dt) =>
-            (!string.IsNullOrWhiteSpace(dt.Name) && dt.Name.Equals("Monthly Song Service Leader", StringComparison.OrdinalIgnoreCase))
-            || (!string.IsNullOrWhiteSpace(dt.Description) && dt.Description.Contains("[LastSundayOnly]", StringComparison.OrdinalIgnoreCase));
-
-        // Last Sunday for the current month of the given week
+        // Calculate date boundaries for monthly duties
+        var firstSundayOfMonth = GetFirstSundayOfMonth(weekStartDate.Year, weekStartDate.Month);
         var lastSundayOfMonth = GetLastSundayOfMonth(weekStartDate.Year, weekStartDate.Month);
 
-        foreach (var dutyType in dutyTypes.OrderBy(dt => dt.OrderIndex))
+        // dutyTypes is already ordered by OrderIndex when passed in
+        foreach (var dutyType in dutyTypes)
         {
             try
             {
-                // Special case: Monthly Song Service Leader (last Sunday evening only)
-                if (IsSpecialLastSundayDuty(dutyType))
+                // Handle duties that should skip last Sunday evening
+                if (isLastSundayEvening && dutyType.SkipLastSundayEvening)
                 {
-                    // Only consider on Sunday PM, and only for the last Sunday of the month
-                    if (serviceType != ServiceType.Sunday_PM || weekStartDate.Date != lastSundayOfMonth.Date)
-                    {
-                        continue; // skip for other weeks/services entirely
-                    }
-                    // Ensure it's treated as manually scheduled: add placeholder and continue
-                    duties[dutyType] = null!;
+                    duties[dutyType] = null!; // Add as null to show placeholder
                     continue;
+                }
+
+                // Handle monthly duties that only occur on specific weeks
+                if (dutyType.IsMonthlyDuty && dutyType.MonthlyDutyFrequency.HasValue)
+                {
+                    bool shouldSkip = dutyType.MonthlyDutyFrequency.Value switch
+                    {
+                        MonthlyDutyFrequency.StartOfMonth => weekStartDate.Date != firstSundayOfMonth.Date,
+                        MonthlyDutyFrequency.EndOfMonth => weekStartDate.Date != lastSundayOfMonth.Date,
+                        MonthlyDutyFrequency.EachWeek => false,
+                        _ => false
+                    };
+
+                    if (shouldSkip)
+                    {
+                        continue; // Skip this duty for this week
+                    }
                 }
 
                 // Always add manually scheduled duties to the list, but skip automatic assignment
@@ -284,8 +328,6 @@ public class ScheduleService
                 throw new InvalidOperationException($"Error assigning {dutyType.Name}: {ex.Message}", ex);
             }
         }
-        
-        return Task.CompletedTask;
     }
 
     private static DateTime GetFirstSundayOfMonth(int year, int month)
