@@ -13,7 +13,7 @@ public static class ControlExtensions
         button.Font = AppStyling.Font;
         button.Padding = new Padding(10, 5, 10, 5);
         button.Cursor = Cursors.Hand;
-        button.MinimumSize = new Size(120, 35);
+        button.MinimumSize = new Size(120, 40);
     }
 
     public static void ApplySecondaryStyle(this Button button)
@@ -25,7 +25,7 @@ public static class ControlExtensions
         button.Font = AppStyling.Font;
         button.Padding = new Padding(10, 5, 10, 5);
         button.Cursor = Cursors.Hand;
-        button.MinimumSize = new Size(120, 35);
+        button.MinimumSize = new Size(120, 40);
     }
 
     public static void ApplyModernStyle(this DataGridView grid)

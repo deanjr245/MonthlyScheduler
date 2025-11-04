@@ -23,15 +23,24 @@ public class SchedulerDbContext : DbContext
 
     public SchedulerDbContext()
     {
-        // Get the directory where the application executable is located
-        var appPath = AppDomain.CurrentDomain.BaseDirectory;
-        
-        // Create a "data" directory if it doesn't exist
-        var dataPath = Path.Combine(appPath, "data");
+        // Use AppData for the user's database
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dataPath = Path.Combine(appDataPath, "MonthlyScheduler");
         Directory.CreateDirectory(dataPath);
         
-        // Set database path in the data directory
         DbPath = Path.Combine(dataPath, "scheduler.db");
+        
+        // If database doesn't exist, copy default from app directory
+        if (!File.Exists(DbPath))
+        {
+            var appPath = AppDomain.CurrentDomain.BaseDirectory;
+            var defaultDb = Path.Combine(appPath, "data", "scheduler.db");
+            
+            if (File.Exists(defaultDb))
+            {
+                File.Copy(defaultDb, DbPath);
+            }
+        }
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)

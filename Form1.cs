@@ -11,6 +11,7 @@ namespace MonthlyScheduler;
 
 public partial class Form1 : Form
 {
+    private readonly SchedulerDbContext _context;
     private ComboBox monthSelect = null!;
     private ComboBox yearSelect = null!;
     private Button btnUpload = null!;
@@ -24,8 +25,9 @@ public partial class Form1 : Form
     private DataGridView scheduleGrid = null!;
     private int NumberOfYearsToShow = 10;
 
-    public Form1()
+    public Form1(SchedulerDbContext context)
     {
+        _context = context;
         InitializeComponent();
         InitializeControls();
         SetupLayout();
@@ -317,8 +319,7 @@ public partial class Form1 : Form
         {
             try
             {
-                using var context = new SchedulerDbContext();
-                var importService = new ExcelImportService(context);
+                var importService = new ExcelImportService(_context);
                 try
                 {
                     await importService.ImportMembersFromExcel(openFileDialog.FileName);
@@ -343,11 +344,10 @@ public partial class Form1 : Form
             var selectedMonth = monthSelect.SelectedIndex + 1; // Adding 1 because SelectedIndex is 0-based
             var selectedYear = (int)yearSelect.SelectedItem!;
 
-            using var context = new SchedulerDbContext();
-            var scheduleService = new ScheduleService(context);
+            var scheduleService = new ScheduleService(_context);
             _ = await scheduleService.GenerateMonthlySchedule(selectedYear, selectedMonth);
 
-            await ConfigureGrid(selectedYear, selectedMonth, context);
+            await ConfigureGrid(selectedYear, selectedMonth, _context);
 
             MessageBox.Show(ScheduleGeneratedSuccess, SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -418,16 +418,14 @@ public partial class Form1 : Form
     {
         try
         {
-            using var context = new SchedulerDbContext();
-
             // Load all data asynchronously
-            var members = context.Members
+            var members = _context.Members
                 .Include(m => m.AvailableDuties)
                 .OrderBy(m => m.ExcludeFromScheduling)
                 .ThenBy(m => m.LastName)
                 .ThenBy(m => m.FirstName);
 
-            var duties = context.DutyTypes
+            var duties = _context.DutyTypes
                 .OrderBy(dt => dt.Category)
                 .ThenBy(dt => dt.Name);
 
@@ -581,8 +579,7 @@ public partial class Form1 : Form
     {
         try
         {
-            using var context = new SchedulerDbContext();
-            var memberForm = new Forms.MemberForm(context);
+            var memberForm = new Forms.MemberForm(_context);
             
             if (memberForm.ShowDialog() == DialogResult.OK)
             {
@@ -620,10 +617,8 @@ public partial class Form1 : Form
             var firstName = row.Cells[ColumnFirstNameText]?.Value?.ToString() ?? string.Empty;
             var lastName = row.Cells[ColumnLastNameText]?.Value?.ToString() ?? string.Empty;
 
-            using var context = new SchedulerDbContext();
-
             // Find the member in the database
-            var member = await context.Members
+            var member = await _context.Members
                 .Include(m => m.AvailableDuties)
                 .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
 
@@ -636,7 +631,7 @@ public partial class Form1 : Form
             // Handle Edit button click
             if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == ColumnEditText)
             {
-                var memberForm = new Forms.MemberForm(context, member);
+                var memberForm = new Forms.MemberForm(_context, member);
                 if (memberForm.ShowDialog() == DialogResult.OK)
                 {
                     await GetMembersView();
@@ -653,8 +648,8 @@ public partial class Form1 : Form
                 {
                     try
                     {
-                        context.Members.Remove(member);
-                        await context.SaveChangesAsync();
+                        _context.Members.Remove(member);
+                        await _context.SaveChangesAsync();
                         await GetMembersView();
                     }
                     catch (Exception ex)
@@ -685,10 +680,9 @@ public partial class Form1 : Form
         {
             try
             {
-                using var context = new SchedulerDbContext();
                 var exportService = new MemberExportService();
                 
-                await exportService.ExportMembersToCSV(context, saveFileDialog.FileName);
+                await exportService.ExportMembersToCSV(_context, saveFileDialog.FileName);
                 MessageBox.Show(MembersExportedSuccess, ExportCompleteTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -702,8 +696,7 @@ public partial class Form1 : Form
     {
         try
         {
-            using var context = new SchedulerDbContext();
-            var manageDutyTypesForm = new Forms.ManageDutyTypesForm(context);
+            var manageDutyTypesForm = new Forms.ManageDutyTypesForm(_context);
             manageDutyTypesForm.ShowDialog();
         }
         catch (Exception ex)
@@ -717,8 +710,7 @@ public partial class Form1 : Form
     {
         try
         {
-            using var context = new SchedulerDbContext();
-            var manageFooterTextForm = new Forms.ManageFooterTextForm(context);
+            var manageFooterTextForm = new Forms.ManageFooterTextForm(_context);
             manageFooterTextForm.ShowDialog();
         }
         catch (Exception ex)
@@ -742,8 +734,7 @@ public partial class Form1 : Form
 
             if (string.IsNullOrEmpty(serviceText) || string.IsNullOrEmpty(dutyTypeName)) return;
 
-            using var dbContext = new SchedulerDbContext();
-            var dutyTypeToEdit = await dbContext.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
+            var dutyTypeToEdit = await _context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
             if (dutyTypeToEdit == null) return;
 
             // Only allow editing manually scheduled duties
@@ -807,8 +798,7 @@ public partial class Form1 : Form
 
             if (string.IsNullOrEmpty(serviceText) || string.IsNullOrEmpty(dutyTypeName)) return;
 
-            using var context = new SchedulerDbContext();
-            var dutyType = await context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
+            var dutyType = await _context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
             if (dutyType == null) return;
 
             var serviceType = serviceText.EndsWith("Morning") ? ServiceType.Sunday_AM :
@@ -849,7 +839,7 @@ public partial class Form1 : Form
                 }
             }
 
-            var assignmentForm = new Forms.AssignmentEditForm(context, dutyType, serviceType);
+            var assignmentForm = new Forms.AssignmentEditForm(_context, dutyType, serviceType);
             if (assignmentForm.ShowDialog() == DialogResult.OK && assignmentForm.SelectedMember != null)
             {
                 var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
@@ -860,7 +850,7 @@ public partial class Form1 : Form
                 scheduleGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
 
                 // Save changes to database
-                var schedule = await context.GeneratedSchedules
+                var schedule = await _context.GeneratedSchedules
                     .Include(s => s.DailySchedules)
                         .ThenInclude(d => d.Assignments)
                     .FirstOrDefaultAsync(s => 
@@ -876,7 +866,7 @@ public partial class Form1 : Form
                         Month = selectedDate.Month,
                         GeneratedDate = DateTime.Now
                     };
-                    await context.GeneratedSchedules.AddAsync(schedule);
+                    await _context.GeneratedSchedules.AddAsync(schedule);
                 }
 
                 var dailySchedule = schedule.DailySchedules
@@ -911,7 +901,7 @@ public partial class Form1 : Form
                     ServiceType = serviceType
                 });
 
-                await context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
         }
         catch (Exception ex)
@@ -925,8 +915,7 @@ public partial class Form1 : Form
     {
         try
         {
-            using var context = new SchedulerDbContext();
-            var savedSchedulesForm = new Forms.SavedSchedulesForm(context);
+            var savedSchedulesForm = new Forms.SavedSchedulesForm(_context);
             if (savedSchedulesForm.ShowDialog() == DialogResult.OK && savedSchedulesForm.SelectedSchedule != null)
             {
                 var schedule = savedSchedulesForm.SelectedSchedule;
@@ -935,7 +924,7 @@ public partial class Form1 : Form
                 monthSelect.SelectedIndex = schedule.Month - 1;
                 yearSelect.SelectedItem = schedule.Year;
 
-                await ConfigureGrid(schedule.Year, schedule.Month, context);
+                await ConfigureGrid(schedule.Year, schedule.Month, _context);
             }
         }
         catch (Exception ex)

@@ -6,6 +6,7 @@ using QuestPDF.Infrastructure;
 using MonthlyScheduler.Data;
 using MonthlyScheduler.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MonthlyScheduler.Services;
 
@@ -55,16 +56,14 @@ public class ScheduleExportService
         string worshipFooterText = string.Empty;
         string avFooterText = string.Empty;
         
-        using (var context = new SchedulerDbContext())
-        {
-            var worshipFooter = await context.CategoryFooterTexts
-                .FirstOrDefaultAsync(f => f.Category == DutyCategory.Worship);
-            var avFooter = await context.CategoryFooterTexts
-                .FirstOrDefaultAsync(f => f.Category == DutyCategory.AudioVisual);
-            
-            worshipFooterText = worshipFooter?.FooterText ?? string.Empty;
-            avFooterText = avFooter?.FooterText ?? string.Empty;
-        }
+        var context = Program.ServiceProvider.GetRequiredService<SchedulerDbContext>();
+        var worshipFooter = await context.CategoryFooterTexts
+            .FirstOrDefaultAsync(f => f.Category == DutyCategory.Worship);
+        var avFooter = await context.CategoryFooterTexts
+            .FirstOrDefaultAsync(f => f.Category == DutyCategory.AudioVisual);
+        
+        worshipFooterText = worshipFooter?.FooterText ?? string.Empty;
+        avFooterText = avFooter?.FooterText ?? string.Empty;
         
         // Split data into worship and AV assignments
         var (worshipRows, avRows) = ParseAssignmentRows(scheduleData);
