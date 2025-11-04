@@ -3,6 +3,9 @@ using System.Text;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using MonthlyScheduler.Data;
+using MonthlyScheduler.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MonthlyScheduler.Services;
 
@@ -33,7 +36,7 @@ public class ScheduleExportService
         File.WriteAllText(filePath, csv.ToString());
     }
     
-    public void ExportToPDF(DataTable scheduleData, string filePath, string title)
+    public async void ExportToPDF(DataTable scheduleData, string filePath, string title)
     {
         QuestPDF.Settings.License = LicenseType.Community;
         
@@ -48,6 +51,21 @@ public class ScheduleExportService
         int serviceColumnIndex = columnIndices.TryGetValue(ServiceColumn, out var serviceIdx) ? serviceIdx : -1;
         int dutyColumnIndex = columnIndices.TryGetValue(DutyColumn, out var dutyIdx) ? dutyIdx : -1;
         
+        // Load footer texts from database
+        string worshipFooterText = string.Empty;
+        string avFooterText = string.Empty;
+        
+        using (var context = new SchedulerDbContext())
+        {
+            var worshipFooter = await context.CategoryFooterTexts
+                .FirstOrDefaultAsync(f => f.Category == DutyCategory.Worship);
+            var avFooter = await context.CategoryFooterTexts
+                .FirstOrDefaultAsync(f => f.Category == DutyCategory.AudioVisual);
+            
+            worshipFooterText = worshipFooter?.FooterText ?? string.Empty;
+            avFooterText = avFooter?.FooterText ?? string.Empty;
+        }
+        
         // Split data into worship and AV assignments
         var (worshipRows, avRows) = ParseAssignmentRows(scheduleData);
         
@@ -61,7 +79,7 @@ public class ScheduleExportService
                 page.DefaultTextStyle(x => x.FontSize(8));
                 
                 page.Header().Element(c => ComposeHeader(c, title, "Worship Assignments"));
-                page.Content().Element(c => ComposeTable(c, scheduleData, worshipRows, serviceColumnIndex, dutyColumnIndex));
+                page.Content().Element(c => ComposeTable(c, scheduleData, worshipRows, serviceColumnIndex, dutyColumnIndex, worshipFooterText));
                 page.Footer().Element(ComposeFooter);
             });
             
@@ -73,7 +91,7 @@ public class ScheduleExportService
                 page.DefaultTextStyle(x => x.FontSize(8));
                 
                 page.Header().Element(c => ComposeHeader(c, title, "Audio-Visual Assignments"));
-                page.Content().Element(c => ComposeTable(c, scheduleData, avRows, serviceColumnIndex, dutyColumnIndex));
+                page.Content().Element(c => ComposeTable(c, scheduleData, avRows, serviceColumnIndex, dutyColumnIndex, avFooterText));
                 page.Footer().Element(ComposeFooter);
             });
         })
@@ -89,9 +107,12 @@ public class ScheduleExportService
         });
     }
 
-    private void ComposeTable(IContainer container, DataTable data, List<DataRow> rows, int serviceColumnIndex, int dutyColumnIndex)
+    private void ComposeTable(IContainer container, DataTable data, List<DataRow> rows, int serviceColumnIndex, int dutyColumnIndex, string footerText)
     {
-        container.PaddingVertical(10).Table(table =>
+        container.Column(column =>
+        {
+            // Main table
+            column.Item().PaddingVertical(10).Table(table =>
         {
             // Define columns (excluding Service column, Duty column wider)
             table.ColumnsDefinition(columns =>
@@ -179,15 +200,22 @@ public class ScheduleExportService
                     }
                 }
                 
-                static IContainer NormalCellStyle(IContainer container)
-                {
-                    return container.Background("#F5F5DC").Border(1).Padding(5).AlignBottom();
+                    static IContainer NormalCellStyle(IContainer container)
+                    {
+                        return container.Background("#F5F5DC").Border(1).Padding(5).AlignBottom();
+                    }
+                    
+                    static IContainer BlankCellStyle(IContainer container)
+                    {
+                        return container.Background("#E8E8D8").Border(1).Padding(5).AlignBottom();
+                    }
                 }
-                
-                static IContainer BlankCellStyle(IContainer container)
-                {
-                    return container.Background("#E8E8D8").Border(1).Padding(5).AlignBottom();
-                }
+            });
+
+            // Add footer text if provided
+            if (!string.IsNullOrWhiteSpace(footerText))
+            {
+                column.Item().PaddingTop(15).Text(footerText).FontSize(9).Italic();
             }
         });
     }

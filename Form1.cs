@@ -20,6 +20,7 @@ public partial class Form1 : Form
     private Button btnExportMembers = null!;
     private Button btnAddMember = null!;
     private Button btnManageDutyTypes = null!;
+    private Button btnManageFooterText = null!;
     private DataGridView scheduleGrid = null!;
     private int NumberOfYearsToShow = 10;
 
@@ -44,19 +45,20 @@ public partial class Form1 : Form
         btnExportMembers = new Button();
         btnAddMember = new Button();
         btnManageDutyTypes = new Button();
+        btnManageFooterText = new Button();
         scheduleGrid = new DataGridView();
 
         // Configure month selection
         monthSelect.DropDownStyle = ComboBoxStyle.DropDownList;
         monthSelect.Dock = DockStyle.Fill;
-        monthSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2);
+        monthSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 1);
         monthSelect.Items.AddRange(System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames[..^1]); // Exclude empty 13th month
         monthSelect.SelectedIndex = DateTime.Now.Month % 12; // Next month (wraps December to January)
 
         // Configure year selection
         yearSelect.DropDownStyle = ComboBoxStyle.DropDownList;
         yearSelect.Dock = DockStyle.Fill;
-        yearSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 2);
+        yearSelect.Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 1);
         var startYear = DateTime.Now.Year - 1;
         for (int i = 0; i <= NumberOfYearsToShow; i++)
         {
@@ -99,6 +101,11 @@ public partial class Form1 : Form
         btnManageDutyTypes.Dock = DockStyle.Fill;
         btnManageDutyTypes.Click += BtnManageDutyTypes_Click;
         btnManageDutyTypes.ApplyModernStyle();
+
+        btnManageFooterText.Text = ButtonManageFooterTextText;
+        btnManageFooterText.Dock = DockStyle.Fill;
+        btnManageFooterText.Click += BtnManageFooterText_Click;
+        btnManageFooterText.ApplyModernStyle();
 
         // Configure main grid
         scheduleGrid.Dock = DockStyle.Fill;
@@ -148,7 +155,7 @@ public partial class Form1 : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 12,
+            RowCount = 13,
             Padding = new Padding(15),
             Width = 220,
             BackColor = AppStyling.DarkBackground
@@ -171,13 +178,14 @@ public partial class Form1 : Form
         // Row 8: Spacer between Member and Duty Type buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
         
-        // Row 9: Duty Type button (AutoSize)
+        // Rows 9-10: Duty Type and Footer Text buttons (AutoSize)
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         
-        // Row 10: Spacer (Percent - fills remaining space)
+        // Row 11: Spacer (Percent - fills remaining space)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         
-        // Row 11: Upload button (AutoSize)
+        // Row 12: Upload button (AutoSize)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
 
@@ -236,13 +244,14 @@ public partial class Form1 : Form
         leftPanel.Controls.Add(btnAddMember, 0, 7);
         // Row 8: spacing
         leftPanel.Controls.Add(btnManageDutyTypes, 0, 9);
+        leftPanel.Controls.Add(btnManageFooterText, 0, 10);
 
         // Add spacer panel that fills remaining space
         var spacerPanel = new Panel { Dock = DockStyle.Fill };
-        leftPanel.Controls.Add(spacerPanel, 0, 10);
+        leftPanel.Controls.Add(spacerPanel, 0, 11);
         
         // Add upload button at the very bottom
-        leftPanel.Controls.Add(btnUpload, 0, 11);
+        leftPanel.Controls.Add(btnUpload, 0, 12);
 
         // Right panel for schedule title and grid
         var rightPanel = new TableLayoutPanel
@@ -700,6 +709,21 @@ public partial class Form1 : Form
         catch (Exception ex)
         {
             MessageBox.Show(string.Format(ErrorManagingDutyTypesFormat, ex.Message), ErrorTitle, 
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void BtnManageFooterText_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            using var context = new SchedulerDbContext();
+            var manageFooterTextForm = new Forms.ManageFooterTextForm(context);
+            manageFooterTextForm.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error managing footer text: {ex.Message}", ErrorTitle,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

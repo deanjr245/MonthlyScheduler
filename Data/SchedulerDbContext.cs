@@ -17,6 +17,7 @@ public class SchedulerDbContext : DbContext
     public DbSet<GeneratedSchedule> GeneratedSchedules { get; set; }
     public DbSet<DailySchedule> DailySchedules { get; set; }
     public DbSet<ScheduleAssignment> ScheduleAssignments { get; set; }
+    public DbSet<CategoryFooterText> CategoryFooterTexts { get; set; }
 
     public string DbPath { get; }
 
@@ -85,6 +86,11 @@ public class SchedulerDbContext : DbContext
         // Index for Year and Month (non-unique)
         modelBuilder.Entity<GeneratedSchedule>()
             .HasIndex(s => new { s.Year, s.Month });
+
+        // Configure CategoryFooterText with unique constraint on Category
+        modelBuilder.Entity<CategoryFooterText>()
+            .HasIndex(c => c.Category)
+            .IsUnique();
 
         base.OnModelCreating(modelBuilder);
     }

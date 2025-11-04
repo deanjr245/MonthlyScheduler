@@ -381,6 +381,22 @@ public class SavedSchedulesForm : Form
                     exportService.ExportToPDF(scheduleData, saveFileDialog.FileName, title);
                     MessageBox.Show("Schedule exported successfully!", "Export Complete", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Open the PDF file with the default application
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = saveFileDialog.FileName,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception openEx)
+                    {
+                        // If opening fails, just show a message but don't crash
+                        MessageBox.Show($"PDF saved but could not open automatically: {openEx.Message}", 
+                            "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
             }
         }

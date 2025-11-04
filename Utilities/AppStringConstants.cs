@@ -15,6 +15,7 @@ public static class AppStringConstants
     public const string ButtonExportMembersText = "Export Members - CSV";
     public const string ButtonAddMemberText = "Add New Member";
     public const string ButtonManageDutyTypesText = "Manage Duty Types";
+    public const string ButtonManageFooterTextText = "Manage PDF Footer Text";
     
     // UI Labels
     public const string LabelSelectMonth = "Select Month:";
