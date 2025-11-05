@@ -28,6 +28,7 @@ public class ManageFooterTextForm : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
+        BackColor = AppStyling.LightBackground;
 
         var mainLayout = new TableLayoutPanel
         {
@@ -35,13 +36,13 @@ public class ManageFooterTextForm : Form
             Padding = new Padding(20),
             ColumnCount = 1,
             RowCount = 5,
-            BackColor = AppStyling.DarkBackground
+            BackColor = AppStyling.LightBackground
         };
 
         mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Worship label
-        mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80)); // Worship textbox
+        mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90)); // Worship textbox
         mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // AV label
-        mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80)); // AV textbox
+        mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90)); // AV textbox
         mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // Buttons
 
         // Worship label
@@ -50,7 +51,7 @@ public class ManageFooterTextForm : Form
             Text = "Worship Assignments Footer Text:",
             AutoSize = true,
             Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 1, FontStyle.Bold),
-            ForeColor = AppStyling.LightText,
+            ForeColor = AppStyling.DarkText,
             Margin = new Padding(0, 0, 0, 5)
         };
 
@@ -69,7 +70,7 @@ public class ManageFooterTextForm : Form
             Text = "Audio-Visual Assignments Footer Text:",
             AutoSize = true,
             Font = new Font(AppStyling.Font.FontFamily, AppStyling.Font.Size + 1, FontStyle.Bold),
-            ForeColor = AppStyling.LightText,
+            ForeColor = AppStyling.DarkText,
             Margin = new Padding(0, 0, 0, 5)
         };
 

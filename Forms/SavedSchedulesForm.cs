@@ -15,29 +15,66 @@ public class SavedSchedulesForm : Form
     private readonly Button _btnLoad;
     private readonly Button _btnClose;
     private readonly Button _btnDelete;
-    private GeneratedSchedule? _selectedSchedule;
-
-    public GeneratedSchedule? SelectedSchedule => _selectedSchedule;
+    private readonly Button _btnManageFooterText;
+    
+    public event EventHandler<GeneratedSchedule>? ScheduleLoaded;
 
     public SavedSchedulesForm(SchedulerDbContext context)
     {
         _context = context;
         Text = "Saved Schedules";
-        Size = new Size(800, 600);
+        Size = new Size(800, 700);
         StartPosition = FormStartPosition.CenterParent;
         BackColor = AppStyling.LightBackground;
         
-        // Add a delete button and manage its state
+        // ===== Initialize all buttons first =====
+        _btnManageFooterText = new Button
+        {
+            Text = "Manage PDF Footer Text",
+            Width = 180
+        };
+        _btnManageFooterText.ApplyModernStyle();
+        _btnManageFooterText.Click += BtnManageFooterText_Click;
+
         _btnDelete = new Button
         {
-            Text = "Delete Schedule",
-            Width = 120,
-            Enabled = false
+            Text = "Delete Schedule"
         };
         _btnDelete.ApplySecondaryStyle();
         _btnDelete.Click += BtnDelete_Click;
 
-        // Create main layout
+        _btnLoad = new Button
+        {
+            Text = "Load Schedule"
+        };
+        _btnLoad.ApplyModernStyle();
+        _btnLoad.Click += BtnLoad_Click;
+
+        _btnClose = new Button
+        {
+            Text = "Close",
+            DialogResult = DialogResult.Cancel
+        };
+        _btnClose.ApplySecondaryStyle();
+
+        // Create grid
+        _schedulesGrid = new DataGridView
+        {
+            Dock = DockStyle.Fill,
+            AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        };
+        _schedulesGrid.ApplyModernStyle();
+        _schedulesGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
+        _schedulesGrid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
+        _schedulesGrid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
+        _schedulesGrid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+        _schedulesGrid.CellClick += SchedulesGrid_CellClick;
+
+        // ===== Create layout structure =====
         var mainLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -46,86 +83,54 @@ public class SavedSchedulesForm : Form
             Padding = new Padding(20)
         };
         mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
-        // Create grid
-        _schedulesGrid = new DataGridView
+        // Button panel with left and right sections
+        var buttonPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            ReadOnly = true,
-            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            MultiSelect = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        };
-        _schedulesGrid.ApplyModernStyle();
-        
-        // Configure grid selection and styling
-        _schedulesGrid.RowHeadersVisible = false;
-        _schedulesGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _schedulesGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
-        _schedulesGrid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
-        _schedulesGrid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
-        _schedulesGrid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-
-        // Create button panel
-        var buttonPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            ColumnCount = 2,
+            RowCount = 1,
             Padding = new Padding(0, 10, 0, 0)
         };
+        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
 
-        _btnClose = new Button
+        var leftPanel = new FlowLayoutPanel
         {
-            Text = "Close",
-            Width = 100,
-            DialogResult = DialogResult.Cancel
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight
         };
-        _btnClose.ApplySecondaryStyle();
 
-        _btnLoad = new Button
+        var rightPanel = new FlowLayoutPanel
         {
-            Text = "Load Schedule",
-            Width = 120,
-            Enabled = false,
-            DialogResult = DialogResult.OK
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft
         };
-        _btnLoad.ApplyModernStyle();
 
-        buttonPanel.Controls.AddRange(new Control[] { _btnClose, _btnLoad, _btnDelete });
+        // ===== Add buttons to panels =====
+        leftPanel.Controls.Add(_btnManageFooterText);
+        rightPanel.Controls.AddRange(new Control[] { _btnClose, _btnLoad, _btnDelete });
 
-        // Add controls to layout
+        // ===== Assemble the layout hierarchy =====
+        buttonPanel.Controls.Add(leftPanel, 0, 0);
+        buttonPanel.Controls.Add(rightPanel, 1, 0);
+        
         mainLayout.Controls.Add(_schedulesGrid, 0, 0);
         mainLayout.Controls.Add(buttonPanel, 0, 1);
-
+        
         Controls.Add(mainLayout);
 
-        // Add cell click handler for export buttons
-        _schedulesGrid.CellClick += SchedulesGrid_CellClick;
-
-        // Load data
-        _ = LoadSchedules();
+        // ===== Load initial data after form is loaded =====
+        this.Load += LoadSchedules;
     }
 
-    private async Task LoadSchedules()
+    private async void LoadSchedules(object? sender, EventArgs e)
     {
         try
         {
             // First clear everything
             _schedulesGrid.DataSource = null;
             _schedulesGrid.Columns.Clear();
-
-            // Add checkbox column before setting data source
-            var selectionColumn = new DataGridViewCheckBoxColumn
-            {
-                Name = "Selected",
-                HeaderText = "",
-                Width = 30,
-                ReadOnly = true
-            };
-            _schedulesGrid.Columns.Add(selectionColumn);
 
             var schedules = await _context.GeneratedSchedules
                 .AsNoTracking()
@@ -141,41 +146,8 @@ public class SavedSchedulesForm : Form
                 })
                 .ToListAsync();
 
-            // Now set the data source and hook up the selection changed event
-            _schedulesGrid.SelectionChanged -= SchedulesGrid_SelectionChanged; // Remove old handler if exists
+            // Set the data source
             _schedulesGrid.DataSource = schedules;
-            _schedulesGrid.SelectionChanged += SchedulesGrid_SelectionChanged; // Add new handler
-
-            // Add export button columns
-            if (!_schedulesGrid.Columns.Contains("ExportCSV"))
-            {
-                var csvBtn = new DataGridViewButtonColumn
-                {
-                    Name = "ExportCSV",
-                    HeaderText = "Export CSV",
-                    Text = "CSV",
-                    UseColumnTextForButtonValue = true,
-                    Width = 80
-                };
-                csvBtn.DefaultCellStyle.BackColor = AppStyling.Success;
-                csvBtn.DefaultCellStyle.ForeColor = Color.White;
-                _schedulesGrid.Columns.Add(csvBtn);
-            }
-
-            if (!_schedulesGrid.Columns.Contains("ExportPDF"))
-            {
-                var pdfBtn = new DataGridViewButtonColumn
-                {
-                    Name = "ExportPDF",
-                    HeaderText = "Export PDF",
-                    Text = "PDF",
-                    UseColumnTextForButtonValue = true,
-                    Width = 80
-                };
-                pdfBtn.DefaultCellStyle.BackColor = AppStyling.Danger;
-                pdfBtn.DefaultCellStyle.ForeColor = Color.White;
-                _schedulesGrid.Columns.Add(pdfBtn);
-            }
 
             // Hide ID column
             if (_schedulesGrid.Columns["Id"] is DataGridViewColumn idColumn)
@@ -183,39 +155,76 @@ public class SavedSchedulesForm : Form
                 idColumn.Visible = false;
             }
 
-            // Add checkbox column if it doesn't exist
-            if (!_schedulesGrid.Columns.Contains("Selected"))
+            // Add checkbox button column at the beginning
+            var checkboxColumn = new DataGridViewCheckBoxColumn
             {
-                var checkboxColumn = new DataGridViewCheckBoxColumn
-                {
-                    Name = "Selected",
-                    HeaderText = "",
-                    Width = 30,
-                    ReadOnly = true
-                };
-                _schedulesGrid.Columns.Insert(0, checkboxColumn);
-                
-                // Initialize checkbox values to false
-                foreach (DataGridViewRow row in _schedulesGrid.Rows)
-                {
-                    row.Cells["Selected"].Value = false;
-                }
-            }
+                Name = "Selected",
+                HeaderText = "",
+                Width = 40,
+                FalseValue = false,
+                TrueValue = true
+            };
+            _schedulesGrid.Columns.Insert(0, checkboxColumn);
 
-            // Configure grid appearance
-            foreach (DataGridViewColumn col in _schedulesGrid.Columns)
+            // Add export button columns
+            var csvBtn = new DataGridViewButtonColumn
             {
-                if (col.Name != "Id")
-                {
-                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
-                }
+                Name = "ExportCSV",
+                HeaderText = "Export CSV",
+                Text = "CSV",
+                UseColumnTextForButtonValue = true,
+                Width = 80
+            };
+            csvBtn.DefaultCellStyle.BackColor = AppStyling.Success;
+            csvBtn.DefaultCellStyle.ForeColor = Color.White;
+            _schedulesGrid.Columns.Add(csvBtn);
+
+            var pdfBtn = new DataGridViewButtonColumn
+            {
+                Name = "ExportPDF",
+                HeaderText = "Export PDF",
+                Text = "PDF",
+                UseColumnTextForButtonValue = true,
+                Width = 80
+            };
+            pdfBtn.DefaultCellStyle.BackColor = AppStyling.Danger;
+            pdfBtn.DefaultCellStyle.ForeColor = Color.White;
+            _schedulesGrid.Columns.Add(pdfBtn);
+
+            // Configure grid column sizing
+            if (_schedulesGrid.Columns["Selected"] is DataGridViewColumn selectedCol)
+            {
+                selectedCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                selectedCol.Width = 40;
             }
             
-            // Clear selection state
-            _selectedSchedule = null;
-            _btnLoad.Enabled = false;
-            _btnDelete.Enabled = false;
-            _schedulesGrid.ClearSelection();
+            if (_schedulesGrid.Columns["ExportCSV"] is DataGridViewColumn csvCol)
+            {
+                csvCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                csvCol.Width = 100;
+            }
+            
+            if (_schedulesGrid.Columns["ExportPDF"] is DataGridViewColumn pdfCol)
+            {
+                pdfCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                pdfCol.Width = 100;
+            }
+            
+            // Let the remaining columns (Month, Year, Generated) fill the space
+            if (_schedulesGrid.Columns["Month"] is DataGridViewColumn monthCol)
+                monthCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            
+            if (_schedulesGrid.Columns["Year"] is DataGridViewColumn yearCol)
+                yearCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            
+            if (_schedulesGrid.Columns["Generated"] is DataGridViewColumn genCol)
+                genCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            
+            // Select the first row by default if any schedules exist
+            if (_schedulesGrid.Rows.Count > 0)
+            {
+                UpdateSelectedRow(0);
+            }
         }
         catch (Exception ex)
         {
@@ -224,74 +233,32 @@ public class SavedSchedulesForm : Form
         }
     }
 
-    private async void SchedulesGrid_SelectionChanged(object? sender, EventArgs e)
-    {
-        try
-        {
-            _selectedSchedule = null;
-            _btnLoad.Enabled = false;
-            _btnDelete.Enabled = false;
-
-            // Clear all checkboxes first using LINQ
-            _schedulesGrid.Rows.Cast<DataGridViewRow>().ToList()
-                .ForEach(row => row.Cells["Selected"].Value = false);
-
-            if (_schedulesGrid.SelectedRows.Count > 0)
-            {
-                var row = _schedulesGrid.SelectedRows[0];
-                if (row?.Cells["Id"]?.Value != null)
-                {
-                    var scheduleId = Convert.ToInt32(row.Cells["Id"].Value);
-                
-                _selectedSchedule = await _context.GeneratedSchedules
-                    .Include(s => s.DailySchedules)
-                        .ThenInclude(d => d.Assignments)
-                            .ThenInclude(a => a.Member)
-                    .Include(s => s.DailySchedules)
-                        .ThenInclude(d => d.Assignments)
-                            .ThenInclude(a => a.DutyType)
-                    .AsNoTracking()  // Prevent tracking issues
-                    .FirstOrDefaultAsync(s => s.Id == scheduleId);
-
-                if (_selectedSchedule != null)
-                {
-                    // Update checkboxes using LINQ
-                    _schedulesGrid.Rows.Cast<DataGridViewRow>()
-                        .Where(gridRow => gridRow.Cells["Selected"]?.Value != null)
-                        .ToList()
-                        .ForEach(gridRow => gridRow.Cells["Selected"].Value = (gridRow.Index == row.Index));
-                }
-
-                    _btnLoad.Enabled = _selectedSchedule != null;
-                    _btnDelete.Enabled = _selectedSchedule != null;
-                }
-            }
-            else
-            {
-                _selectedSchedule = null;
-                _btnLoad.Enabled = false;
-                _btnDelete.Enabled = false;
-                // Clear checkbox when no selection using LINQ
-                _schedulesGrid.Rows.Cast<DataGridViewRow>().ToList()
-                    .ForEach(gridRow => gridRow.Cells["Selected"].Value = false);
-            }
-        }
-        catch (Exception ex)
-        {
-            _selectedSchedule = null;
-            _btnLoad.Enabled = false;
-            _btnDelete.Enabled = false;
-            MessageBox.Show($"Error selecting schedule: {ex.Message}", "Error",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
     private async void BtnDelete_Click(object? sender, EventArgs e)
     {
-        if (_selectedSchedule == null) return;
+        // Find the row with the checked checkbox button
+        DataGridViewRow? selectedRow = null;
+        foreach (DataGridViewRow row in _schedulesGrid.Rows)
+        {
+            if (row.Cells["Selected"].Value is bool isSelected && isSelected)
+            {
+                selectedRow = row;
+                break;
+            }
+        }
 
-        var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(_selectedSchedule.Month);
+        if (selectedRow == null)
+        {
+            MessageBox.Show("No schedule selected.", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var scheduleId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+        var monthName = selectedRow.Cells["Month"].Value?.ToString() ?? "";
+        var year = Convert.ToInt32(selectedRow.Cells["Year"].Value);
+
         if (MessageBox.Show(
-            string.Format(ConfirmDeleteScheduleFormat, monthName, _selectedSchedule.Year),
+            string.Format(ConfirmDeleteScheduleFormat, monthName, year),
             ConfirmDeleteTitle,
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning) == DialogResult.Yes)
@@ -299,24 +266,15 @@ public class SavedSchedulesForm : Form
             try
             {
                 var scheduleToDelete = await _context.GeneratedSchedules
-                    .FirstOrDefaultAsync(s => s.Id == _selectedSchedule.Id);
+                    .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
                 if (scheduleToDelete != null)
                 {
                     _context.GeneratedSchedules.Remove(scheduleToDelete);
                     await _context.SaveChangesAsync();
                     
-                    // Clear selection state
-                    _selectedSchedule = null;
-                    _btnLoad.Enabled = false;
-                    _btnDelete.Enabled = false;
-                    
                     // Reload the grid and auto-select the first row if one exists
-                    await LoadSchedules();
-                    if (_schedulesGrid.Rows.Count > 0)
-                    {
-                        _schedulesGrid.Rows[0].Selected = true;
-                    }
+                    LoadSchedules(null, EventArgs.Empty);
                 }
             }
             catch (Exception ex)
@@ -327,14 +285,33 @@ public class SavedSchedulesForm : Form
         }
     }
 
+    private void UpdateSelectedRow(int rowIndex)
+    {
+        // Clear all checkbox buttons first
+        foreach (DataGridViewRow row in _schedulesGrid.Rows)
+        {
+            row.Cells["Selected"].Value = false;
+        }
+
+        // Select this checkbox button
+        _schedulesGrid.Rows[rowIndex].Cells["Selected"].Value = true;
+        
+        // Force the checkbox to refresh and display the checked state
+        _schedulesGrid.RefreshEdit();
+    }
+
     private async void SchedulesGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0) return;
 
         var columnName = _schedulesGrid.Columns[e.ColumnIndex].Name;
         
+        // Handle row clicks (not on buttons or checkbox button)
         if (columnName != "ExportCSV" && columnName != "ExportPDF")
+        {
+            UpdateSelectedRow(e.RowIndex);
             return;
+        }
 
         try
         {
@@ -403,6 +380,74 @@ public class SavedSchedulesForm : Form
         catch (Exception ex)
         {
             MessageBox.Show($"Error exporting schedule: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void BtnManageFooterText_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            var manageFooterTextForm = new ManageFooterTextForm(_context);
+            manageFooterTextForm.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error managing footer text: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async void BtnLoad_Click(object? sender, EventArgs e)
+    {
+        // Find the row with the checked checkbox button
+        DataGridViewRow? selectedRow = null;
+        foreach (DataGridViewRow row in _schedulesGrid.Rows)
+        {
+            if (row.Cells["Selected"].Value is bool isSelected && isSelected)
+            {
+                selectedRow = row;
+                break;
+            }
+        }
+
+        if (selectedRow == null)
+        {
+            MessageBox.Show("No schedule selected.", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            var scheduleId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+
+            // NOW load the full schedule with all related data
+            var fullSchedule = await _context.GeneratedSchedules
+                .Include(s => s.DailySchedules)
+                    .ThenInclude(d => d.Assignments)
+                        .ThenInclude(a => a.Member)
+                .Include(s => s.DailySchedules)
+                    .ThenInclude(d => d.Assignments)
+                        .ThenInclude(a => a.DutyType)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == scheduleId);
+
+            if (fullSchedule != null)
+            {
+                // Raise the event so Form1 can handle the loading
+                ScheduleLoaded?.Invoke(this, fullSchedule);
+                Close();
+            }
+            else
+            {
+                MessageBox.Show("Schedule not found.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error loading schedule: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

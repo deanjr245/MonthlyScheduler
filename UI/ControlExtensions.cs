@@ -11,9 +11,9 @@ public static class ControlExtensions
         button.BackColor = AppStyling.Primary;
         button.ForeColor = Color.White;
         button.Font = AppStyling.Font;
-        button.Padding = new Padding(10, 5, 10, 5);
+        button.Padding = new Padding(5, 0, 5, 0);
         button.Cursor = Cursors.Hand;
-        button.MinimumSize = new Size(120, 40);
+        button.MinimumSize = new Size(130, 35);
     }
 
     public static void ApplySecondaryStyle(this Button button)
@@ -23,9 +23,9 @@ public static class ControlExtensions
         button.BackColor = AppStyling.Secondary;
         button.ForeColor = Color.White;
         button.Font = AppStyling.Font;
-        button.Padding = new Padding(10, 5, 10, 5);
+        button.Padding = new Padding(5, 0, 5, 0);
         button.Cursor = Cursors.Hand;
-        button.MinimumSize = new Size(120, 40);
+        button.MinimumSize = new Size(130, 35);
     }
 
     public static void ApplyModernStyle(this DataGridView grid)
