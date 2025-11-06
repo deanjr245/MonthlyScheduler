@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MonthlyScheduler</AssemblyName>
+    <Version>1.0.0</Version>
+    <Company>Dean Williams</Company>
+    <Product>Monthly Scheduler</Product>
+    <Copyright>Copyright © 2025</Copyright>
+    <Description>Monthly duty scheduling application</Description>
   </PropertyGroup>
 
   <ItemGroup>
