@@ -68,7 +68,7 @@ public static class AppStringConstants
     public const string LastSundayOnlyAssignMessage = "This duty can only be assigned on the last Sunday evening of the month.";
     
     // Misc
-    public const string ClickToAssignText = "(Click to assign)";
+    public const string ClickToAssignText = "(Double-click to assign)";
     public const string YesText = "Yes";
     public const string NoText = "No";
     

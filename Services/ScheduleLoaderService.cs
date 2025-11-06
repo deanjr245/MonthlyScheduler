@@ -2,13 +2,14 @@ using MonthlyScheduler.Models;
 using MonthlyScheduler.Data;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using MonthlyScheduler.Utilities;
 
 namespace MonthlyScheduler.Services;
 
 public class ScheduleLoaderService
 {
     private readonly SchedulerDbContext _context;
-    private const string ClickToAssignText = "(Click to assign)";
+    private const string ClickToAssignText = AppStringConstants.ClickToAssignText;
     private const string SongServiceText = "Song Service";
     private const string ServiceColumnName = "Service";
     private const string DutyColumnName = "Duty";
