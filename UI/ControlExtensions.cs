@@ -1,5 +1,3 @@
-using System.Drawing.Drawing2D;
-
 namespace MonthlyScheduler.UI;
 
 public static class ControlExtensions
@@ -37,7 +35,7 @@ public static class ControlExtensions
         grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
         grid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
         grid.DefaultCellStyle.ForeColor = Color.FromArgb(33, 37, 41);
-        grid.RowsDefaultCellStyle.Padding = new Padding(3);
+        grid.RowsDefaultCellStyle.Padding = new Padding(5);
         grid.DefaultCellStyle.Font = AppStyling.Font;
         grid.ColumnHeadersDefaultCellStyle.Font = AppStyling.FontBold;
         grid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
@@ -64,23 +62,9 @@ public static class ControlExtensions
         comboBox.Height = 35;
     }
 
-    public static void ApplyModernStyle(this NumericUpDown numericUpDown)
-    {
-        numericUpDown.Font = AppStyling.Font;
-        numericUpDown.BackColor = Color.White;
-        numericUpDown.ForeColor = Color.FromArgb(33, 37, 41);
-        numericUpDown.Height = 35;
-    }
-
     public static void ApplyModernStyle(this Label label)
     {
         label.Font = AppStyling.Font;
         label.ForeColor = AppStyling.DarkText;
-    }
-
-    public static void ApplyModernStyle(this Panel panel)
-    {
-        panel.BackColor = AppStyling.DarkBackground;
-        panel.BorderStyle = BorderStyle.None;
     }
 }

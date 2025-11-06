@@ -25,7 +25,6 @@ public class SavedSchedulesForm : Form
         Text = "Saved Schedules";
         Size = new Size(800, 700);
         StartPosition = FormStartPosition.CenterParent;
-        BackColor = AppStyling.LightBackground;
         
         // ===== Initialize all buttons first =====
         _btnManageFooterText = new Button
@@ -65,7 +64,8 @@ public class SavedSchedulesForm : Form
             AllowUserToDeleteRows = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             MultiSelect = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            Margin = new Padding(10, 0, 10, 0),
         };
         _schedulesGrid.ApplyModernStyle();
         _schedulesGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
@@ -80,7 +80,8 @@ public class SavedSchedulesForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
-            Padding = new Padding(20)
+            Padding = new Padding(20),
+            BackColor = AppStyling.DarkBackground
         };
         mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -90,10 +91,8 @@ public class SavedSchedulesForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
-            Padding = new Padding(0, 10, 0, 0)
+            Padding = new Padding(0, 50, 0, 0)
         };
-        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
-        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
 
         var leftPanel = new FlowLayoutPanel
         {
