@@ -32,4 +32,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\RiceRoadLogo.png" />
+  </ItemGroup>
+
 </Project>

@@ -193,7 +193,7 @@ public partial class Form1 : Form
 
         var logoPictureBox = new PictureBox
         {
-            Image = Image.FromFile("../../../Assets/RiceRoadLogo.png"),
+            Image = LoadEmbeddedImage("MonthlyScheduler.Assets.RiceRoadLogo.png"),
             SizeMode = PictureBoxSizeMode.Zoom,
             Dock = DockStyle.Fill,
             BackColor = AppStyling.LightBackground
@@ -978,5 +978,23 @@ public partial class Form1 : Form
         {
             scheduleGrid.ResumeLayout();
         }
+    }
+
+    private Image? LoadEmbeddedImage(string resourceName)
+    {
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream != null)
+            {
+                return Image.FromStream(stream);
+            }
+        }
+        catch
+        {
+            // If loading fails, return null (logo won't display but app won't crash)
+        }
+        return null;
     }
 }
