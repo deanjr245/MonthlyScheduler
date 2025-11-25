@@ -53,17 +53,12 @@ public class ScheduleExportService
         int dutyColumnIndex = columnIndices.TryGetValue(DutyColumn, out var dutyIdx) ? dutyIdx : -1;
         
         // Load footer texts from database
-        string worshipFooterText = string.Empty;
-        string avFooterText = string.Empty;
-        
         var context = Program.ServiceProvider.GetRequiredService<SchedulerDbContext>();
-        var worshipFooter = await context.CategoryFooterTexts
-            .FirstOrDefaultAsync(f => f.Category == DutyCategory.Worship);
-        var avFooter = await context.CategoryFooterTexts
-            .FirstOrDefaultAsync(f => f.Category == DutyCategory.AudioVisual);
+        var worshipFooter = await context.CategoryFooterTexts.FirstOrDefaultAsync(f => f.Category == DutyCategory.Worship);
+        var avFooter = await context.CategoryFooterTexts.FirstOrDefaultAsync(f => f.Category == DutyCategory.AudioVisual);
         
-        worshipFooterText = worshipFooter?.FooterText ?? string.Empty;
-        avFooterText = avFooter?.FooterText ?? string.Empty;
+        var worshipFooterText = worshipFooter?.FooterText ?? string.Empty;
+        var avFooterText = avFooter?.FooterText ?? string.Empty;
         
         // Split data into worship and AV assignments
         var (worshipRows, avRows) = ParseAssignmentRows(scheduleData);
@@ -112,101 +107,99 @@ public class ScheduleExportService
         {
             // Main table
             column.Item().PaddingVertical(10).Table(table =>
-        {
-            // Define columns (excluding Service column, Duty column wider)
-            table.ColumnsDefinition(columns =>
             {
-                for (int i = 0; i < data.Columns.Count; i++)
+                // Define columns (excluding Service column, Duty column wider)
+                table.ColumnsDefinition(columns =>
                 {
-                    if (i == serviceColumnIndex)
-                        continue;
-                    
-                    if (i == dutyColumnIndex)
+                    for (int i = 0; i < data.Columns.Count; i++)
                     {
-                        columns.RelativeColumn(1.5f); // Duty column 50% wider
-                    }
-                    else
-                    {
-                        columns.RelativeColumn();
-                    }
-                }
-            });
-            
-            // Header with light blue background
-            table.Header(header =>
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (i == serviceColumnIndex)
-                        continue;
-                    
-                    if (i == dutyColumnIndex)
-                    {
-                        header.Cell().Element(HeaderCellStyle).AlignLeft().Text(data.Columns[i].ColumnName).Bold();
-                    }
-                    else
-                    {
-                        header.Cell().Element(HeaderCellStyle).Text(data.Columns[i].ColumnName).Bold();
-                    }
-                }
-                
-                static IContainer HeaderCellStyle(IContainer container)
-                {
-                    return container.Background("#ADD8E6").Border(1).Padding(7).AlignBottom();
-                }
-            });
-            
-            // Rows with eggshell background
-            foreach (DataRow row in rows)
-            {
-                var service = row["Service"]?.ToString() ?? string.Empty;
-                var isBlankRow = string.IsNullOrWhiteSpace(service);
-                var isEvening = service.Contains("Evening", StringComparison.OrdinalIgnoreCase);
-                
-                for (int i = 0; i < row.ItemArray.Length; i++)
-                {
-                    // Skip Service column
-                    if (i == serviceColumnIndex)
-                        continue;
+                        if (i == serviceColumnIndex)
+                            continue;
                         
-                    var cellText = row.ItemArray[i]?.ToString() ?? string.Empty;
-                    var isDutyColumn = i == dutyColumnIndex;
-                    
-                    if (isBlankRow)
-                    {
-                        var cell = table.Cell().Element(BlankCellStyle);
-                        if (isDutyColumn)
-                            cell.AlignLeft();
-                        cell.Text(cellText);
-                    }
-                    else
-                    {
-                        var cell = table.Cell().Element(NormalCellStyle);
-                        if (isDutyColumn)
-                            cell.AlignLeft();
-                            
-                        cell.Text(text =>
+                        if (i == dutyColumnIndex)
                         {
-                            if (isEvening)
-                            {
-                                text.Span(cellText).FontColor("#FF0000");
-                            }
-                            else
-                            {
-                                text.Span(cellText);
-                            }
-                        });
+                            columns.RelativeColumn(1.5f); // Duty column 50% wider
+                        }
+                        else
+                        {
+                            columns.RelativeColumn();
+                        }
                     }
-                }
-                
+                });
+            
+                // Header with light blue background
+                table.Header(header =>
+                {
+                    for (int i = 0; i < data.Columns.Count; i++)
+                    {
+                        if (i == serviceColumnIndex)
+                            continue;
+                        
+                        if (i == dutyColumnIndex)
+                        {
+                            header.Cell().Element(HeaderCellStyle).AlignLeft().Text(data.Columns[i].ColumnName).Bold();
+                        }
+                        else
+                        {
+                            header.Cell().Element(HeaderCellStyle).Text(data.Columns[i].ColumnName).Bold();
+                        }
+                    }
+                    
+                    static IContainer HeaderCellStyle(IContainer container)
+                    {
+                        return container.Background("#ADD8E6").Border(1).Padding(7).AlignCenter();
+                    }
+                });
+            
+                // Rows with eggshell background
+                foreach (DataRow row in rows)
+                {
+                    var service = row["Service"]?.ToString() ?? string.Empty;
+                    var isBlankRow = string.IsNullOrWhiteSpace(service);
+                    var isEvening = service.Contains("Evening", StringComparison.OrdinalIgnoreCase);
+                    
+                    for (int i = 0; i < row.ItemArray.Length; i++)
+                    {
+                        // Skip Service column
+                        if (i == serviceColumnIndex)
+                            continue;
+                            
+                        var cellText = row.ItemArray[i]?.ToString() ?? string.Empty;
+                        var isDutyColumn = i == dutyColumnIndex;
+                        
+                        if (isBlankRow)
+                        {
+                            var cell = table.Cell().Element(BlankCellStyle);
+                            cell.Text(cellText);
+                        }
+                        else
+                        {
+                            var cell = table.Cell().Element(NormalCellStyle);
+                            if (isDutyColumn)
+                                cell.AlignLeft();
+                                
+                            cell.Text(text =>
+                            {
+                                if (isEvening)
+                                {
+                                    text.Span(cellText).FontColor("#FF0000");
+                                }
+                                else
+                                {
+                                    text.Span(cellText);
+                                }
+                            });
+                        }
+                    }
+                    
                     static IContainer NormalCellStyle(IContainer container)
                     {
-                        return container.Background("#F5F5DC").Border(1).Padding(5).AlignBottom();
+                        return container.Background("#F5F5DC").Border(1).Padding(5).AlignCenter();
                     }
                     
                     static IContainer BlankCellStyle(IContainer container)
                     {
-                        return container.Background("#E8E8D8").Border(1).Padding(5).AlignBottom();
+                        return container.Background("#E8E8D8").Border(1).Padding(5).AlignCenter();
                     }
                 }
             });
@@ -231,7 +224,7 @@ public class ScheduleExportService
         bool inAVSection = false;
         
         // Get the AudioVisual category name from the enum
-        var avCategoryName = Models.DutyCategory.AudioVisual.ToString();
+        var avCategoryName = DutyCategory.AudioVisual.ToString();
         
         foreach (DataRow row in scheduleData.Rows)
         {
@@ -261,6 +254,13 @@ public class ScheduleExportService
                 worshipRows.Add(row);
             }
         }
+
+        // Remove trailing blank rows from both sections
+        while (worshipRows.Count > 0 && string.IsNullOrWhiteSpace(worshipRows[^1]["Service"]?.ToString()))
+            worshipRows.RemoveAt(worshipRows.Count - 1);
+        
+        while (avRows.Count > 0 && string.IsNullOrWhiteSpace(avRows[^1]["Service"]?.ToString()))
+            avRows.RemoveAt(avRows.Count - 1);
         
         return (worshipRows, avRows);
     }

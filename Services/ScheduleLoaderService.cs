@@ -21,7 +21,7 @@ public class ScheduleLoaderService
 
     public async Task<DataTable> LoadScheduleData(int year, int month)
     {
-        // Build the base schedule table (previously LoadScheduleToDataTable)
+        // Build the base schedule table
         var baseTable = new DataTable();
         var firstSunday = GetFirstSundayOfMonth(year, month);
         var lastSunday = GetLastSundayOfMonth(year, month);
@@ -85,7 +85,7 @@ public class ScheduleLoaderService
                 {
                     var d = sundayDates[i];
                     var columnIndex = firstDateColumnIndex + i;
-                    string? memberName = null;
+                    string? cellValue = null;
                     
                     // Check if this duty should be skipped on last Sunday evening
                     bool isLastSundayEvening = serviceType == ServiceType.Sunday_PM && d.Date == lastSunday.Date && dutyType.SkipLastSundayEvening;
@@ -105,11 +105,11 @@ public class ScheduleLoaderService
                             {
                                 var assignment = dailySchedule.Assignments
                                     .FirstOrDefault(a => a.DutyTypeId == dutyType.Id && a.ServiceType == serviceType);
-                                memberName = assignment?.Member?.FullName;
+                                cellValue = dutyType.ManualAssignmentType == ManualAssignmentType.TextInput ? assignment?.Notes : assignment?.Member?.FullName;
                             }
                         }
 
-                        row[columnIndex] = memberName ?? ClickToAssignText;
+                        row[columnIndex] = cellValue ?? ClickToAssignText;
                     }
                 }
                 baseTable.Rows.Add(row);

@@ -706,16 +706,22 @@ public partial class Form1 : Form
 
             // Get the duty type first
             var gridRow = scheduleGrid.Rows[e.RowIndex];
-            var serviceText = gridRow.Cells[ColumnServiceText].Value?.ToString();
             var dutyTypeName = gridRow.Cells[ColumnDutyText].Value?.ToString();
 
-            if (string.IsNullOrEmpty(serviceText) || string.IsNullOrEmpty(dutyTypeName)) return;
+            if (string.IsNullOrEmpty(dutyTypeName))
+                return;
 
             var dutyTypeToEdit = await _context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
-            if (dutyTypeToEdit == null) return;
+            if (dutyTypeToEdit == null)
+                return;
+
+            var serviceType = dutyTypeToEdit.IsMorningDuty ? ServiceType.Sunday_AM :
+                            dutyTypeToEdit.IsEveningDuty ? ServiceType.Sunday_PM :
+                            dutyTypeToEdit.IsMonthlyDuty ? ServiceType.Monthly :
+                            ServiceType.Wednesday;
 
             // Check if this is a text input assignment
-            if (dutyTypeToEdit.ManualAssignmentType == Models.ManualAssignmentType.TextInput)
+            if (dutyTypeToEdit.ManualAssignmentType == ManualAssignmentType.TextInput)
             {
                 var currentValue = gridRow.Cells[e.ColumnIndex].Value?.ToString() ?? string.Empty;
                 
@@ -753,30 +759,27 @@ public partial class Form1 : Form
                     Width = 80
                 };
 
-                inputForm.Controls.AddRange(new Control[] { inputBox, okButton, cancelButton });
+                inputForm.Controls.AddRange([inputBox, okButton, cancelButton]);
                 inputForm.AcceptButton = okButton;
                 inputForm.CancelButton = cancelButton;
 
                 if (inputForm.ShowDialog() == DialogResult.OK)
                 {
                     gridRow.Cells[e.ColumnIndex].Value = inputBox.Text;
-                    // Note: Text assignments don't save to database - they're for display only
+                    
+                    var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+                    var year = (int)yearSelect.SelectedItem!;
+                    var selectedDate = DateTime.Parse($"{columnName} {year}");
+                    selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
+
+                    await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, null, inputBox.Text);
                 }
                 return;
             }
 
-            if (string.IsNullOrEmpty(serviceText) || string.IsNullOrEmpty(dutyTypeName)) return;
-
-            var dutyType = await _context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
-            if (dutyType == null) return;
-
-            var serviceType = serviceText.EndsWith("Morning") ? ServiceType.Sunday_AM :
-                            serviceText.EndsWith("Evening") ? ServiceType.Sunday_PM :
-                            ServiceType.Wednesday;
-
             // If this is a Last-Sunday-only duty, restrict editing to that date on Sunday PM
-            bool isLastSundayOnly = (!string.IsNullOrWhiteSpace(dutyType.Name) && dutyType.Name.Equals("Monthly Song Service Leader", StringComparison.OrdinalIgnoreCase))
-                                    || (!string.IsNullOrWhiteSpace(dutyType.Description) && dutyType.Description.Contains("[LastSundayOnly]", StringComparison.OrdinalIgnoreCase));
+            bool isLastSundayOnly = (!string.IsNullOrWhiteSpace(dutyTypeToEdit.Name) && dutyTypeToEdit.Name.Equals("Monthly Song Service Leader", StringComparison.OrdinalIgnoreCase))
+                                    || (!string.IsNullOrWhiteSpace(dutyTypeToEdit.Description) && dutyTypeToEdit.Description.Contains("[LastSundayOnly]", StringComparison.OrdinalIgnoreCase));
             if (isLastSundayOnly)
             {
                 if (serviceType != ServiceType.Sunday_PM)
@@ -808,67 +811,19 @@ public partial class Form1 : Form
                 }
             }
 
-            var assignmentForm = new Forms.AssignmentEditForm(_context, dutyType);
+            var assignmentForm = new Forms.AssignmentEditForm(_context, dutyTypeToEdit);
             if (assignmentForm.ShowDialog() == DialogResult.OK && assignmentForm.SelectedMember != null)
             {
+                // Update the grid cell
+                scheduleGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
+
                 var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
                 var year = (int)yearSelect.SelectedItem!;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
                 selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
 
-                // Update the grid cell
-                scheduleGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
-
                 // Save changes to database
-                var schedule = await _context.GeneratedSchedules
-                    .Include(s => s.DailySchedules)
-                        .ThenInclude(d => d.Assignments)
-                    .FirstOrDefaultAsync(s => 
-                        s.Year == selectedDate.Year && 
-                        s.Month == selectedDate.Month);
-
-                if (schedule == null)
-                {
-                    // Error out if schedule not found
-                    MessageBox.Show("No schedule found for the selected month and year.", ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                var dailySchedule = schedule.DailySchedules
-                    .FirstOrDefault(d => d.Date.Date == selectedDate.Date);
-
-                if (dailySchedule == default)
-                {
-                    // Create new daily schedule if not found
-                    dailySchedule = new DailySchedule
-                    {
-                        Date = selectedDate,
-                        GeneratedScheduleId = schedule.Id
-                    };
-
-                    schedule.DailySchedules.Add(dailySchedule);
-                }
-
-                // Remove any existing assignment for this duty/service
-                var existingAssignment = dailySchedule.Assignments
-                    .FirstOrDefault(a => 
-                        a.DutyTypeId == dutyType.Id && 
-                        a.ServiceType == serviceType);
-
-                if (existingAssignment != null)
-                {
-                    dailySchedule.Assignments.Remove(existingAssignment);
-                }
-
-                // Add new assignment
-                dailySchedule.Assignments.Add(new ScheduleAssignment
-                {
-                    Member = assignmentForm.SelectedMember,
-                    DutyType = dutyType,
-                    ServiceType = serviceType
-                });
-
-                await _context.SaveChangesAsync();
+                await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, assignmentForm.SelectedMember);
             }
         }
         catch (Exception ex)
@@ -986,5 +941,59 @@ public partial class Form1 : Form
             // If loading fails, return null (logo won't display but app won't crash)
         }
         return null;
+    }
+
+    private async Task SaveAssignment(DateTime selectedDate, DutyType dutyTypeToEdit, ServiceType serviceType, Member? selectedMember = null, string? notes = null)
+    {
+        var schedule = await _context.GeneratedSchedules
+            .Include(s => s.DailySchedules)
+                .ThenInclude(d => d.Assignments)
+            .FirstOrDefaultAsync(s => 
+                s.Year == selectedDate.Year && 
+                s.Month == selectedDate.Month);
+
+        if (schedule == null)
+        {
+            // Error out if schedule not found
+            MessageBox.Show("No schedule found for the selected month and year.", ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        var dailySchedule = schedule.DailySchedules
+            .FirstOrDefault(d => d.Date.Date == selectedDate.Date);
+
+        if (dailySchedule == default)
+        {
+            // Create new daily schedule if not found
+            dailySchedule = new DailySchedule
+            {
+                Date = selectedDate,
+                GeneratedScheduleId = schedule.Id
+            };
+
+            schedule.DailySchedules.Add(dailySchedule);
+        }
+
+        // Remove any existing assignment for this duty/service
+        var existingAssignment = dailySchedule.Assignments
+            .FirstOrDefault(a => 
+                a.DutyTypeId == dutyTypeToEdit.Id && 
+                a.ServiceType == serviceType);
+
+        if (existingAssignment != null)
+        {
+            dailySchedule.Assignments.Remove(existingAssignment);
+        }
+
+        // Add new assignment
+        dailySchedule.Assignments.Add(new ScheduleAssignment
+        {
+            Member = selectedMember ?? null,
+            DutyType = dutyTypeToEdit,
+            ServiceType = serviceType,
+            Notes = notes
+        });
+
+        await _context.SaveChangesAsync();
     }
 }

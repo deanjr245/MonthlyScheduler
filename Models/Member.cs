@@ -13,18 +13,6 @@ public class Member
     public List<MemberDuty> AvailableDuties { get; set; } = new();
     public List<DutyAssignment> Assignments { get; set; } = new();
 
-    public Member()
-    {
-        // Required by EF Core
-    }
-
-    public Member(string firstName, string lastName) : this()
-    {
-        FirstName = firstName;
-        LastName = lastName;
-        HasSubmittedForm = false;
-    }
-
     public string FullName => $"{FirstName} {LastName}";
 
     public void AddDuty(DutyType dutyType)
@@ -42,33 +30,8 @@ public class Member
         }
     }
 
-    public void RemoveDuty(DutyType dutyType)
-    {
-        var memberDuty = AvailableDuties.FirstOrDefault(d => d.DutyTypeId == dutyType.Id);
-        if (memberDuty != null)
-        {
-            AvailableDuties.Remove(memberDuty);
-        }
-    }
-
     public bool IsAvailableForDuty(DutyType dutyType)
     {
         return AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id);
-    }
-
-    public void ClearDuties()
-    {
-        AvailableDuties.Clear();
-    }
-
-    public void UpdateAvailableDuties(IEnumerable<DutyType> dutyTypes)
-    {
-        AvailableDuties = dutyTypes.Select(dt => new MemberDuty 
-        { 
-            MemberId = Id, 
-            Member = this,
-            DutyTypeId = dt.Id, 
-            DutyType = dt 
-        }).ToList();
     }
 }
