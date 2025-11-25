@@ -714,14 +714,6 @@ public partial class Form1 : Form
             var dutyTypeToEdit = await _context.DutyTypes.FirstOrDefaultAsync(dt => dt.Name == dutyTypeName);
             if (dutyTypeToEdit == null) return;
 
-            // Only allow editing manually scheduled duties
-            if (!dutyTypeToEdit.ManuallyScheduled)
-            {
-                MessageBox.Show(CannotEditAutoScheduledDuty,
-                    CannotEditAssignmentTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
             // Check if this is a text input assignment
             if (dutyTypeToEdit.ManualAssignmentType == Models.ManualAssignmentType.TextInput)
             {
@@ -816,12 +808,13 @@ public partial class Form1 : Form
                 }
             }
 
-            var assignmentForm = new Forms.AssignmentEditForm(_context, dutyType, serviceType);
+            var assignmentForm = new Forms.AssignmentEditForm(_context, dutyType);
             if (assignmentForm.ShowDialog() == DialogResult.OK && assignmentForm.SelectedMember != null)
             {
                 var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
                 var year = (int)yearSelect.SelectedItem!;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
+                selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
 
                 // Update the grid cell
                 scheduleGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
@@ -836,26 +829,23 @@ public partial class Form1 : Form
 
                 if (schedule == null)
                 {
-                    // Create new schedule if none exists
-                    schedule = new GeneratedSchedule
-                    {
-                        Year = selectedDate.Year,
-                        Month = selectedDate.Month,
-                        GeneratedDate = DateTime.Now
-                    };
-                    await _context.GeneratedSchedules.AddAsync(schedule);
+                    // Error out if schedule not found
+                    MessageBox.Show("No schedule found for the selected month and year.", ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
                 var dailySchedule = schedule.DailySchedules
-                    .FirstOrDefault(d => d.Date.Date == selectedDate.Date) 
-                    ?? new DailySchedule
+                    .FirstOrDefault(d => d.Date.Date == selectedDate.Date);
+
+                if (dailySchedule == default)
+                {
+                    // Create new daily schedule if not found
+                    dailySchedule = new DailySchedule
                     {
                         Date = selectedDate,
-                        DayOfWeek = selectedDate.DayOfWeek
+                        GeneratedScheduleId = schedule.Id
                     };
 
-                if (!schedule.DailySchedules.Contains(dailySchedule))
-                {
                     schedule.DailySchedules.Add(dailySchedule);
                 }
 

@@ -63,7 +63,6 @@ public static class AppStringConstants
     
     // Validation/Info Messages
     public const string MemberNotFoundError = "Member not found.";
-    public const string CannotEditAutoScheduledDuty = "This duty is automatically scheduled. To manually assign it, first mark it as 'Include but don't schedule' in the duty type settings.";
     public const string LastSundayOnlyOccursMessage = "This duty only occurs on the last Sunday evening of the month.";
     public const string LastSundayOnlyAssignMessage = "This duty can only be assigned on the last Sunday evening of the month.";
     

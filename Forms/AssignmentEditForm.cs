@@ -13,7 +13,7 @@ public class AssignmentEditForm : Form
 
     public Member? SelectedMember => _selectedMember;
 
-    public AssignmentEditForm(SchedulerDbContext context, DutyType dutyType, ServiceType serviceType)
+    public AssignmentEditForm(SchedulerDbContext context, DutyType dutyType)
     {
         _context = context;
         Text = $"Edit {dutyType.Name} Assignment";
