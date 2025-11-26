@@ -331,7 +331,7 @@ public class SavedSchedulesForm : Form
                 {
                     Filter = "CSV Files|*.csv",
                     Title = "Export Schedule to CSV",
-                    FileName = $"Schedule_{month}_{year}.csv"
+                    FileName = $"{month} {year} Worship and AV Schedule.csv"
                 };
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
@@ -348,7 +348,7 @@ public class SavedSchedulesForm : Form
                 {
                     Filter = "PDF Files|*.pdf",
                     Title = "Export Schedule to PDF",
-                    FileName = $"Schedule_{month}_{year}.pdf"
+                    FileName = $"{month} {year} Worship and AV Schedule.pdf"
                 };
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
