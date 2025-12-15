@@ -408,6 +408,7 @@ public partial class Form1 : Form
         {
             scheduleGrid.DataSource = null;
             scheduleGrid.Columns.Clear();
+            scheduleGrid.ApplyModernStyle();
 
             // Remove selection highlighting but enable hover effect
             scheduleGrid.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
