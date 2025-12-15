@@ -24,6 +24,8 @@ public static class AppStyling
     public static readonly Color DarkText = Color.Black;
     public static readonly Color LightText = Color.FromArgb(232, 234, 237);       // Light text for dark backgrounds
     public static readonly Color SubText = Color.FromArgb(108, 117, 125);         // Gray text for secondary info
+    public static readonly Color DuplicateHighlight = Color.FromArgb(255, 230, 230); // Light red for duplicate highlights
+    public static readonly Color HoverColor = Color.FromArgb(240, 245, 255);        // Light blue for hover effects
     
     // Borders and separators
     public static readonly Color Border = Color.FromArgb(222, 226, 230);          // Light borders

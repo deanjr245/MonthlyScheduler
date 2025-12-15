@@ -22,7 +22,9 @@ public partial class Form1 : Form
     private Button btnAddMember = null!;
     private Button btnManageDutyTypes = null!;
     private DataGridView scheduleGrid = null!;
-    private int NumberOfYearsToShow = 10;
+    private readonly int NumberOfYearsToShow = 10;
+    private int? _hoveredRowIndex;
+    private readonly HashSet<(int Row, int Col)> _duplicateCells = new();
 
     public Form1(SchedulerDbContext context)
     {
@@ -30,8 +32,17 @@ public partial class Form1 : Form
         InitializeComponent();
         InitializeControls();
         SetupLayout();
-        scheduleGrid.CellClick += ScheduleGrid_CellClick;
         scheduleGrid.CellDoubleClick += ScheduleGrid_CellDoubleClick;
+        scheduleGrid.CellValueChanged += async (s, e) =>
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+
+            await CheckForDuplicates(columnName);
+        };
+
     }
 
     private void InitializeControls()
@@ -112,18 +123,43 @@ public partial class Form1 : Form
         scheduleGrid.DefaultCellStyle.Padding = new Padding(0);
 
         // Setup hover effect once
-        var hoverColor = Color.FromArgb(240, 245, 255);
-        scheduleGrid.RowTemplate.DefaultCellStyle.BackColor = Color.White;
-        scheduleGrid.CellMouseEnter += (s, e) => {
+        scheduleGrid.CellMouseEnter += (s, e) =>
+        {
             if (e.RowIndex >= 0)
             {
-                scheduleGrid.Rows[e.RowIndex].DefaultCellStyle.BackColor = hoverColor;
+                _hoveredRowIndex = e.RowIndex;
+                scheduleGrid.InvalidateRow(e.RowIndex);
             }
         };
-        scheduleGrid.CellMouseLeave += (s, e) => {
+
+        scheduleGrid.CellMouseLeave += (s, e) =>
+        {
             if (e.RowIndex >= 0)
             {
-                scheduleGrid.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
+                _hoveredRowIndex = null;
+                scheduleGrid.InvalidateRow(e.RowIndex);
+            }
+        };
+
+        scheduleGrid.CellFormatting += (s, e) =>
+        {
+            int row = e.RowIndex;
+            int col = e.ColumnIndex;
+
+            // Default background
+            e.CellStyle.BackColor = AppStyling.LightBackground;
+
+            // Duplicate CELL wins over hover
+            if (_duplicateCells.Contains((row, col)))
+            {
+                e.CellStyle.BackColor = AppStyling.DuplicateHighlight;
+                return;
+            }
+
+            // Hover applies only if NOT duplicate
+            if (_hoveredRowIndex == row)
+            {
+                e.CellStyle.BackColor = AppStyling.HoverColor;
             }
         };
     }
@@ -162,13 +198,15 @@ public partial class Form1 : Form
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         
         // Rows 1-3: Controls (AutoSize)
-        Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
+        for (int i = 0; i < 3; i++)
+            leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         
         // Row 4: Spacer between Schedule and Member buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
         
         // Rows 5-7: Member controls (AutoSize)
-        Enumerable.Range(0, 3).ToList().ForEach(_ => leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize)));
+        for (int i = 0; i < 3; i++)
+            leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         
         // Row 8: Spacer between Member and Duty Type buttons (Absolute)
         leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
@@ -370,7 +408,6 @@ public partial class Form1 : Form
         {
             scheduleGrid.DataSource = null;
             scheduleGrid.Columns.Clear();
-            scheduleGrid.ApplyModernStyle();
 
             // Remove selection highlighting but enable hover effect
             scheduleGrid.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
@@ -588,76 +625,6 @@ public partial class Form1 : Form
         }
     }
 
-    private async void ScheduleGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
-    {
-        try
-        {
-            // Ignore header clicks
-            if (e.RowIndex < 0)
-                return;
-
-            // Only handle clicks in member view - check if Edit/Delete columns exist
-            if (!scheduleGrid.Columns.Contains(ColumnEditText) || !scheduleGrid.Columns.Contains(ColumnDeleteText))
-                return;
-
-            // Check if First Name and Last Name columns exist (member view)
-            if (!scheduleGrid.Columns.Contains(ColumnFirstNameText) || !scheduleGrid.Columns.Contains(ColumnLastNameText))
-                return;
-
-            var row = scheduleGrid.Rows[e.RowIndex];
-            var firstName = row.Cells[ColumnFirstNameText]?.Value?.ToString() ?? string.Empty;
-            var lastName = row.Cells[ColumnLastNameText]?.Value?.ToString() ?? string.Empty;
-
-            // Find the member in the database
-            var member = await _context.Members
-                .Include(m => m.AvailableDuties)
-                .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
-
-            if (member == null)
-            {
-                MessageBox.Show(MemberNotFoundError, ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Handle Edit button click
-            if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == ColumnEditText)
-            {
-                var memberForm = new Forms.MemberForm(_context, member);
-                if (memberForm.ShowDialog() == DialogResult.OK)
-                {
-                    GetMembersView();
-                }
-            }
-            // Handle Delete button click
-            else if (e.ColumnIndex >= 0 && scheduleGrid.Columns[e.ColumnIndex].Name == ColumnDeleteText)
-            {
-                if (MessageBox.Show(
-                    string.Format(ConfirmDeleteMemberFormat, member.FullName), 
-                    ConfirmDeleteTitle, 
-                    MessageBoxButtons.YesNo, 
-                    MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    try
-                    {
-                        _context.Members.Remove(member);
-                        await _context.SaveChangesAsync();
-                        GetMembersView();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(string.Format(ErrorDeletingMemberFormat, ex.Message), ErrorTitle,
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(string.Format(ErrorLoadingMembersFormat, ex.Message), ErrorTitle,
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
-
     private async void BtnExportMembers_Click(object? sender, EventArgs e)
     {
         using SaveFileDialog saveFileDialog = new()
@@ -773,6 +740,7 @@ public partial class Form1 : Form
                     selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
 
                     await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, null, inputBox.Text);
+                    await CheckForDuplicates(columnName);
                 }
                 return;
             }
@@ -824,6 +792,7 @@ public partial class Form1 : Form
 
                 // Save changes to database
                 await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, assignmentForm.SelectedMember);
+                await CheckForDuplicates(columnName);
             }
         }
         catch (Exception ex)
@@ -893,31 +862,57 @@ public partial class Form1 : Form
             // Set data source
             scheduleGrid.DataSource = scheduleData;
 
+            // Disable column reordering AFTER data is bound
+            scheduleGrid.AllowUserToOrderColumns = false;
+
             // Configure columns
             scheduleGrid.RowTemplate.Height = 25;
 
-            // Configure fixed-width columns
+            var allColumns = scheduleGrid.Columns.Cast<DataGridViewColumn>().ToList();
+
+            // Define fixed-width columns
             var fixedWidthColumns = new Dictionary<string, int>
             {
                 [ColumnServiceText] = 180,
                 [ColumnDutyText] = 200
             };
 
-            fixedWidthColumns
-                .Where(kvp => scheduleGrid.Columns[kvp.Key] is DataGridViewColumn)
-                .ToList()
-                .ForEach(kvp =>
+            // Configure all columns in one pass
+            foreach (var col in allColumns)
+            {
+                if (fixedWidthColumns.TryGetValue(col.Name, out var width))
                 {
-                    var col = scheduleGrid.Columns[kvp.Key]!;
-                    col.Width = kvp.Value;
+                    col.Width = width;
                     col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                });
+                }
+                else
+                {
+                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                }
 
-            // Configure fill columns using LINQ
-            scheduleGrid.Columns.Cast<DataGridViewColumn>()
-                .Where(col => !fixedWidthColumns.ContainsKey(col.Name))
-                .ToList()
-                .ForEach(col => col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill);
+                col.SortMode = DataGridViewColumnSortMode.NotSortable;
+
+                // After loading the schedule, check for duplicates in each assignment column
+                // Skip the Service and Duty columns
+                if (col.Index <= 1) continue;
+
+                // Get all unique member names in this column
+                var memberNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (DataGridViewRow row in scheduleGrid.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    
+                    var cellValue = row.Cells[col.Index].Value?.ToString();
+                    if (!string.IsNullOrWhiteSpace(cellValue))
+                    {
+                        memberNames.Add(cellValue);
+                    }
+                }
+                
+                // Check duplicates for each unique member in this column
+                await CheckForDuplicates(col.Name);
+            }
         }
         finally
         {
@@ -995,5 +990,58 @@ public partial class Form1 : Form
         });
 
         await _context.SaveChangesAsync();
+    }
+
+    private async Task CheckForDuplicates(string columnName)
+    {
+        if (string.IsNullOrWhiteSpace(columnName))
+            return;
+
+        // Find the column index by name
+        if (!scheduleGrid.Columns.Contains(columnName))
+            return;
+
+        int columnIndex = scheduleGrid.Columns[columnName].Index;
+
+        if (columnIndex < 0)
+            return;
+
+        _duplicateCells.RemoveWhere(c => c.Col == columnIndex);
+
+        // Build map: value -> row indexes
+        var valueMap = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (DataGridViewRow row in scheduleGrid.Rows)
+        {
+            if (row.IsNewRow) continue;
+
+            var value = row.Cells[columnIndex].Value?.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(value)) continue;
+
+            if (DuplicateExceptions.Contains(value))
+                continue;
+
+            if (!valueMap.TryGetValue(value, out var rows))
+            {
+                rows = new List<int>();
+                valueMap[value] = rows;
+            }
+
+            rows.Add(row.Index);
+        }
+
+        // Mark only the duplicate CELLS
+        foreach (var kvp in valueMap)
+        {
+            if (kvp.Value.Count > 1)
+            {
+                foreach (var rowIndex in kvp.Value)
+                {
+                    _duplicateCells.Add((rowIndex, columnIndex));
+                }
+            }
+        }
+
+        scheduleGrid.InvalidateColumn(columnIndex);
     }
 }

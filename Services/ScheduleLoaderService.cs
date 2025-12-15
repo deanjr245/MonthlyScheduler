@@ -10,9 +10,9 @@ public class ScheduleLoaderService
 {
     private readonly SchedulerDbContext _context;
     private const string ClickToAssignText = AppStringConstants.ClickToAssignText;
-    private const string SongServiceText = "Song Service";
-    private const string ServiceColumnName = "Service";
-    private const string DutyColumnName = "Duty";
+    private const string SongServiceText = AppStringConstants.SongServiceText;
+    private const string ServiceColumnName = AppStringConstants.ServiceColumnName;
+    private const string DutyColumnName = AppStringConstants.DutyColumnName;
 
     public ScheduleLoaderService(SchedulerDbContext context)
     {

@@ -66,13 +66,6 @@ public static class AppStringConstants
     public const string LastSundayOnlyOccursMessage = "This duty only occurs on the last Sunday evening of the month.";
     public const string LastSundayOnlyAssignMessage = "This duty can only be assigned on the last Sunday evening of the month.";
     
-    // Misc
-    public const string ClickToAssignText = "(Double-click to assign)";
-    public const string YesText = "Yes";
-    public const string NoText = "No";
-    
-    #endregion
-    
     #region MemberForm Constants
     
     public const string FormTitleMemberAdd = "Add New Member";
@@ -89,4 +82,24 @@ public static class AppStringConstants
     public const string DescriptionRequiredMessage = "Please enter a description for the duty type.";
     
     #endregion
+
+    #region SchedulerService Constants
+    public const string SongServiceText = "Song Service";
+    public const string ServiceColumnName = "Service";
+    public const string DutyColumnName = "Duty";
+    #endregion
+        
+    // Misc
+    public const string ClickToAssignText = "(Double-click to assign)";
+    public const string YesText = "Yes";
+    public const string NoText = "No";
+    
+    #endregion
+
+    // Columns that are exceptions for duplicate checking
+    public static readonly string[] DuplicateExceptions = 
+    [
+        SongServiceText,
+        ClickToAssignText
+    ];
 }
