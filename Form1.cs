@@ -21,7 +21,7 @@ public partial class Form1 : Form
     private Button btnExportMembers = null!;
     private Button btnAddMember = null!;
     private Button btnManageDutyTypes = null!;
-    private DataGridView scheduleGrid = null!;
+    private DataGridView dataGrid = null!;
     private readonly int NumberOfYearsToShow = 10;
     private int? _hoveredRowIndex;
     private readonly HashSet<(int Row, int Col)> _duplicateCells = new();
@@ -32,13 +32,14 @@ public partial class Form1 : Form
         InitializeComponent();
         InitializeControls();
         SetupLayout();
-        scheduleGrid.CellDoubleClick += ScheduleGrid_CellDoubleClick;
-        scheduleGrid.CellValueChanged += async (s, e) =>
+        dataGrid.CellClick += ScheduleGrid_CellClick;
+        dataGrid.CellDoubleClick += ScheduleGrid_CellDoubleClick;
+        dataGrid.CellValueChanged += async (s, e) =>
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
-            var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+            var columnName = dataGrid.Columns[e.ColumnIndex].Name;
 
             await CheckForDuplicates(columnName);
         };
@@ -57,7 +58,7 @@ public partial class Form1 : Form
         btnExportMembers = new Button();
         btnAddMember = new Button();
         btnManageDutyTypes = new Button();
-        scheduleGrid = new DataGridView();
+        dataGrid = new DataGridView();
 
         // Configure month selection
         monthSelect.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -114,34 +115,34 @@ public partial class Form1 : Form
         btnManageDutyTypes.ApplyModernStyle();
 
         // Configure main grid
-        scheduleGrid.Dock = DockStyle.Fill;
-        scheduleGrid.ApplyModernStyle();
-        scheduleGrid.ScrollBars = ScrollBars.Both;
-        scheduleGrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
-        scheduleGrid.RowTemplate.Height = 25;
-        scheduleGrid.BorderStyle = BorderStyle.None;
-        scheduleGrid.DefaultCellStyle.Padding = new Padding(0);
+        dataGrid.Dock = DockStyle.Fill;
+        dataGrid.ApplyModernStyle();
+        dataGrid.ScrollBars = ScrollBars.Both;
+        dataGrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+        dataGrid.RowTemplate.Height = 25;
+        dataGrid.BorderStyle = BorderStyle.None;
+        dataGrid.DefaultCellStyle.Padding = new Padding(0);
 
         // Setup hover effect once
-        scheduleGrid.CellMouseEnter += (s, e) =>
+        dataGrid.CellMouseEnter += (s, e) =>
         {
             if (e.RowIndex >= 0)
             {
                 _hoveredRowIndex = e.RowIndex;
-                scheduleGrid.InvalidateRow(e.RowIndex);
+                dataGrid.InvalidateRow(e.RowIndex);
             }
         };
 
-        scheduleGrid.CellMouseLeave += (s, e) =>
+        dataGrid.CellMouseLeave += (s, e) =>
         {
             if (e.RowIndex >= 0)
             {
                 _hoveredRowIndex = null;
-                scheduleGrid.InvalidateRow(e.RowIndex);
+                dataGrid.InvalidateRow(e.RowIndex);
             }
         };
 
-        scheduleGrid.CellFormatting += (s, e) =>
+        dataGrid.CellFormatting += (s, e) =>
         {
             int row = e.RowIndex;
             int col = e.ColumnIndex;
@@ -300,10 +301,10 @@ public partial class Form1 : Form
         rightPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // Grid
 
         // Configure control properties
-        scheduleGrid.Margin = new Padding(0);
+        dataGrid.Margin = new Padding(0);
 
         // Add grid to right panel
-        rightPanel.Controls.Add(scheduleGrid, 0, 1);
+        rightPanel.Controls.Add(dataGrid, 0, 1);
 
         // Configure and add panels to main layout with fixed left panel width
         mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
@@ -403,43 +404,43 @@ public partial class Form1 : Form
             control.Dispose();
         }
 
-        scheduleGrid.SuspendLayout();
+        dataGrid.SuspendLayout();
         try
         {
-            scheduleGrid.DataSource = null;
-            scheduleGrid.Columns.Clear();
-            scheduleGrid.ApplyModernStyle();
+            dataGrid.DataSource = null;
+            dataGrid.Columns.Clear();
+            dataGrid.ApplyModernStyle();
 
             // Remove selection highlighting but enable hover effect
-            scheduleGrid.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
-            scheduleGrid.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
+            dataGrid.DefaultCellStyle.SelectionBackColor = dataGrid.DefaultCellStyle.BackColor;
+            dataGrid.DefaultCellStyle.SelectionForeColor = dataGrid.DefaultCellStyle.ForeColor;
             
             // Set hover style for all rows
-            scheduleGrid.RowsDefaultCellStyle.BackColor = Color.White;
-            scheduleGrid.RowsDefaultCellStyle.ForeColor = AppStyling.DarkText;
+            dataGrid.RowsDefaultCellStyle.BackColor = Color.White;
+            dataGrid.RowsDefaultCellStyle.ForeColor = AppStyling.DarkText;
 
             if (forMembers)
             {
                 // Set grid options specific to member view
-                scheduleGrid.AllowUserToAddRows = false;
-                scheduleGrid.AllowUserToDeleteRows = false;
-                scheduleGrid.ReadOnly = true;
-                scheduleGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-                scheduleGrid.MultiSelect = false;
+                dataGrid.AllowUserToAddRows = false;
+                dataGrid.AllowUserToDeleteRows = false;
+                dataGrid.ReadOnly = true;
+                dataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+                dataGrid.MultiSelect = false;
             }
             else
             {
                 // Reset to schedule view settings
-                scheduleGrid.AllowUserToAddRows = false;
-                scheduleGrid.AllowUserToDeleteRows = false;
-                scheduleGrid.ReadOnly = false;
-                scheduleGrid.SelectionMode = DataGridViewSelectionMode.CellSelect;
-                scheduleGrid.MultiSelect = false;
+                dataGrid.AllowUserToAddRows = false;
+                dataGrid.AllowUserToDeleteRows = false;
+                dataGrid.ReadOnly = false;
+                dataGrid.SelectionMode = DataGridViewSelectionMode.CellSelect;
+                dataGrid.MultiSelect = false;
             }
         }
         finally
         {
-            scheduleGrid.ResumeLayout();
+            dataGrid.ResumeLayout();
         }
     }
 
@@ -502,17 +503,17 @@ public partial class Form1 : Form
 
             ClearAndSetupGrid(forMembers: true);
 
-            scheduleGrid.SuspendLayout();
-            scheduleGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dataGrid.SuspendLayout();
+            dataGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             
             try
             {
                 // Bind data first
-                scheduleGrid.DataSource = dataTable;
+                dataGrid.DataSource = dataTable;
 
                 // Increase column header height to prevent text cutoff
-                scheduleGrid.ColumnHeadersHeight = 65;
-                scheduleGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+                dataGrid.ColumnHeadersHeight = 65;
+                dataGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
                 // Add Edit and Delete button columns at the FRONT by inserting
                 var editBtn = new DataGridViewButtonColumn
@@ -526,9 +527,9 @@ public partial class Form1 : Form
                 };
                 editBtn.DefaultCellStyle.BackColor = AppStyling.Info;
                 editBtn.DefaultCellStyle.ForeColor = Color.White;
-                editBtn.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
-                editBtn.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
-                scheduleGrid.Columns.Insert(0, editBtn);
+                editBtn.DefaultCellStyle.SelectionBackColor = dataGrid.DefaultCellStyle.BackColor;
+                editBtn.DefaultCellStyle.SelectionForeColor = dataGrid.DefaultCellStyle.ForeColor;
+                dataGrid.Columns.Insert(0, editBtn);
 
                 var deleteBtn = new DataGridViewButtonColumn
                 {
@@ -541,27 +542,27 @@ public partial class Form1 : Form
                 };
                 deleteBtn.DefaultCellStyle.BackColor = AppStyling.Danger;
                 deleteBtn.DefaultCellStyle.ForeColor = Color.White;
-                deleteBtn.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
-                deleteBtn.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
-                scheduleGrid.Columns.Insert(1, deleteBtn);
+                deleteBtn.DefaultCellStyle.SelectionBackColor = dataGrid.DefaultCellStyle.BackColor;
+                deleteBtn.DefaultCellStyle.SelectionForeColor = dataGrid.DefaultCellStyle.ForeColor;
+                dataGrid.Columns.Insert(1, deleteBtn);
 
                 // Set fixed widths for name/form/excluded columns
-                if (scheduleGrid.Columns[ColumnLastNameText] is DataGridViewColumn lastNameCol)
+                if (dataGrid.Columns[ColumnLastNameText] is DataGridViewColumn lastNameCol)
                 {
                     lastNameCol.Width = 120;
                     lastNameCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns[ColumnFirstNameText] is DataGridViewColumn firstNameCol)
+                if (dataGrid.Columns[ColumnFirstNameText] is DataGridViewColumn firstNameCol)
                 {
                     firstNameCol.Width = 120;
                     firstNameCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns[ColumnFormReceivedText] is DataGridViewColumn formCol)
+                if (dataGrid.Columns[ColumnFormReceivedText] is DataGridViewColumn formCol)
                 {
                     formCol.Width = 100;
                     formCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
-                if (scheduleGrid.Columns[ColumnExcludedText] is DataGridViewColumn excludedCol)
+                if (dataGrid.Columns[ColumnExcludedText] is DataGridViewColumn excludedCol)
                 {
                     excludedCol.Width = 80;
                     excludedCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
@@ -570,19 +571,19 @@ public partial class Form1 : Form
                 // All duty columns use Fill mode to distribute remaining space - using LINQ
                 var fixedColumns = new HashSet<string> { ColumnEditText, ColumnDeleteText, ColumnLastNameText, ColumnFirstNameText, ColumnFormReceivedText, ColumnExcludedText };
                 
-                scheduleGrid.Columns.Cast<DataGridViewColumn>().ToList().ForEach(col =>
+                dataGrid.Columns.Cast<DataGridViewColumn>().ToList().ForEach(col =>
                 {
                     if (!fixedColumns.Contains(col.Name))
                     {
                         col.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                     }
-                    col.DefaultCellStyle.SelectionBackColor = scheduleGrid.DefaultCellStyle.BackColor;
-                    col.DefaultCellStyle.SelectionForeColor = scheduleGrid.DefaultCellStyle.ForeColor;
+                    col.DefaultCellStyle.SelectionBackColor = dataGrid.DefaultCellStyle.BackColor;
+                    col.DefaultCellStyle.SelectionForeColor = dataGrid.DefaultCellStyle.ForeColor;
                 });
             }
             finally
             {
-                scheduleGrid.ResumeLayout();
+                dataGrid.ResumeLayout();
             }
         }
         catch (Exception ex)
@@ -613,7 +614,7 @@ public partial class Form1 : Form
             if (memberForm.ShowDialog() == DialogResult.OK)
             {
                 // Refresh the member view if it's currently displayed
-                if (scheduleGrid.DataSource is DataTable)
+                if (dataGrid.DataSource is DataTable)
                 {
                     GetMembersView();
                 }
@@ -623,6 +624,76 @@ public partial class Form1 : Form
         catch (Exception ex)
         {
             MessageBox.Show(string.Format(ErrorAddingMemberFormat, ex.Message), ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async void ScheduleGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        try
+        {
+            // Ignore header clicks
+            if (e.RowIndex < 0)
+                return;
+
+            // Only handle clicks in member view - check if Edit/Delete columns exist
+            if (!dataGrid.Columns.Contains(ColumnEditText) || !dataGrid.Columns.Contains(ColumnDeleteText))
+                return;
+
+            // Check if First Name and Last Name columns exist (member view)
+            if (!dataGrid.Columns.Contains(ColumnFirstNameText) || !dataGrid.Columns.Contains(ColumnLastNameText))
+                return;
+
+            var row = dataGrid.Rows[e.RowIndex];
+            var firstName = row.Cells[ColumnFirstNameText]?.Value?.ToString() ?? string.Empty;
+            var lastName = row.Cells[ColumnLastNameText]?.Value?.ToString() ?? string.Empty;
+
+            // Find the member in the database
+            var member = await _context.Members
+                .Include(m => m.AvailableDuties)
+                .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
+
+            if (member == null)
+            {
+                MessageBox.Show(MemberNotFoundError, ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Handle Edit button click
+            if (e.ColumnIndex >= 0 && dataGrid.Columns[e.ColumnIndex].Name == ColumnEditText)
+            {
+                var memberForm = new Forms.MemberForm(_context, member);
+                if (memberForm.ShowDialog() == DialogResult.OK)
+                {
+                    GetMembersView();
+                }
+            }
+            // Handle Delete button click
+            else if (e.ColumnIndex >= 0 && dataGrid.Columns[e.ColumnIndex].Name == ColumnDeleteText)
+            {
+                if (MessageBox.Show(
+                    string.Format(ConfirmDeleteMemberFormat, member.FullName), 
+                    ConfirmDeleteTitle, 
+                    MessageBoxButtons.YesNo, 
+                    MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    try
+                    {
+                        _context.Members.Remove(member);
+                        await _context.SaveChangesAsync();
+                        GetMembersView();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(string.Format(ErrorDeletingMemberFormat, ex.Message), ErrorTitle,
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(string.Format(ErrorLoadingMembersFormat, ex.Message), ErrorTitle,
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -673,7 +744,7 @@ public partial class Form1 : Form
             if (e.RowIndex < 0 || e.ColumnIndex <= 1) return;
 
             // Get the duty type first
-            var gridRow = scheduleGrid.Rows[e.RowIndex];
+            var gridRow = dataGrid.Rows[e.RowIndex];
             var dutyTypeName = gridRow.Cells[ColumnDutyText].Value?.ToString();
 
             if (string.IsNullOrEmpty(dutyTypeName))
@@ -735,7 +806,7 @@ public partial class Form1 : Form
                 {
                     gridRow.Cells[e.ColumnIndex].Value = inputBox.Text;
                     
-                    var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+                    var columnName = dataGrid.Columns[e.ColumnIndex].Name;
                     var year = (int)yearSelect.SelectedItem!;
                     var selectedDate = DateTime.Parse($"{columnName} {year}");
                     selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
@@ -759,7 +830,7 @@ public partial class Form1 : Form
                 }
 
                 // Parse column date with current year and month from the schedule
-                var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+                var columnName = dataGrid.Columns[e.ColumnIndex].Name;
                 var year = (int)yearSelect.SelectedItem!;
                 var month = monthSelect.SelectedIndex + 1;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
@@ -784,9 +855,9 @@ public partial class Form1 : Form
             if (assignmentForm.ShowDialog() == DialogResult.OK && assignmentForm.SelectedMember != null)
             {
                 // Update the grid cell
-                scheduleGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
+                dataGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
 
-                var columnName = scheduleGrid.Columns[e.ColumnIndex].Name;
+                var columnName = dataGrid.Columns[e.ColumnIndex].Name;
                 var year = (int)yearSelect.SelectedItem!;
                 var selectedDate = DateTime.Parse($"{columnName} {year}");
                 selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
@@ -857,19 +928,19 @@ public partial class Form1 : Form
         var scheduleData = await scheduleLoader.LoadScheduleData(year, month);
 
         // Suspend layout for performance
-        scheduleGrid.SuspendLayout();
+        dataGrid.SuspendLayout();
         try
         {
             // Set data source
-            scheduleGrid.DataSource = scheduleData;
+            dataGrid.DataSource = scheduleData;
 
             // Disable column reordering AFTER data is bound
-            scheduleGrid.AllowUserToOrderColumns = false;
+            dataGrid.AllowUserToOrderColumns = false;
 
             // Configure columns
-            scheduleGrid.RowTemplate.Height = 25;
+            dataGrid.RowTemplate.Height = 25;
 
-            var allColumns = scheduleGrid.Columns.Cast<DataGridViewColumn>().ToList();
+            var allColumns = dataGrid.Columns.Cast<DataGridViewColumn>().ToList();
 
             // Define fixed-width columns
             var fixedWidthColumns = new Dictionary<string, int>
@@ -900,7 +971,7 @@ public partial class Form1 : Form
                 // Get all unique member names in this column
                 var memberNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                foreach (DataGridViewRow row in scheduleGrid.Rows)
+                foreach (DataGridViewRow row in dataGrid.Rows)
                 {
                     if (row.IsNewRow) continue;
                     
@@ -917,7 +988,7 @@ public partial class Form1 : Form
         }
         finally
         {
-            scheduleGrid.ResumeLayout();
+            dataGrid.ResumeLayout();
         }
     }
 
@@ -999,10 +1070,10 @@ public partial class Form1 : Form
             return;
 
         // Find the column index by name
-        if (!scheduleGrid.Columns.Contains(columnName))
+        if (!dataGrid.Columns.Contains(columnName))
             return;
 
-        int columnIndex = scheduleGrid.Columns[columnName].Index;
+        int columnIndex = dataGrid.Columns[columnName].Index;
 
         if (columnIndex < 0)
             return;
@@ -1012,7 +1083,7 @@ public partial class Form1 : Form
         // Build map: value -> row indexes
         var valueMap = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (DataGridViewRow row in scheduleGrid.Rows)
+        foreach (DataGridViewRow row in dataGrid.Rows)
         {
             if (row.IsNewRow) continue;
 
@@ -1043,6 +1114,6 @@ public partial class Form1 : Form
             }
         }
 
-        scheduleGrid.InvalidateColumn(columnIndex);
+        dataGrid.InvalidateColumn(columnIndex);
     }
 }

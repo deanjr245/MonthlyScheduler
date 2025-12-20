@@ -32,7 +32,7 @@ partial class Form1
         yearSelect = new ComboBox();
         btnUpload = new Button();
         btnGenerateSchedule = new Button();
-        scheduleGrid = new DataGridView();
+        dataGrid = new DataGridView();
         SuspendLayout();
 
         // Form settings
