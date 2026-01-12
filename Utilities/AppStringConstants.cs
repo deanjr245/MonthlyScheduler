@@ -93,6 +93,10 @@ public static class AppStringConstants
     public const string ClickToAssignText = "(Double-click to assign)";
     public const string YesText = "Yes";
     public const string NoText = "No";
+
+    public const string MorningText = "Morning";
+    public const string EveningText = "Evening";
+    public const string WednesdayText = "Wednesday";
     
     #endregion
 

@@ -9,6 +9,6 @@ public class ScheduleAssignment
     public virtual Member? Member { get; set; }
     public int DutyTypeId { get; set; }
     public virtual DutyType DutyType { get; set; } = null!;
-    public ServiceType ServiceType { get; set; }
+    public ServiceType? ServiceType { get; set; }
     public string? Notes { get; set; }
 }

@@ -595,6 +595,9 @@ public partial class Form1 : Form
 
     private void BtnViewMembers_Click(object? sender, EventArgs e)
     {
+        // Clear out any duplicate highlighting since we're reusing the grid from the scheduler...
+        _duplicateCells.Clear();
+
         try
         {
             GetMembersView();
@@ -743,7 +746,6 @@ public partial class Form1 : Form
             // Ignore header clicks and clicks on non-assignment cells
             if (e.RowIndex < 0 || e.ColumnIndex <= 1) return;
 
-            // Get the duty type first
             var gridRow = dataGrid.Rows[e.RowIndex];
             var dutyTypeName = gridRow.Cells[ColumnDutyText].Value?.ToString();
 
@@ -754,10 +756,26 @@ public partial class Form1 : Form
             if (dutyTypeToEdit == null)
                 return;
 
-            var serviceType = dutyTypeToEdit.IsMorningDuty ? ServiceType.Sunday_AM :
-                            dutyTypeToEdit.IsEveningDuty ? ServiceType.Sunday_PM :
-                            dutyTypeToEdit.IsMonthlyDuty ? ServiceType.Monthly :
-                            ServiceType.Wednesday;
+            // Parse column date with current year and month from the schedule
+            var columnName = dataGrid.Columns[e.ColumnIndex].Name;
+            var year = (int)yearSelect.SelectedItem!;
+            var month = monthSelect.SelectedIndex + 1;
+            var selectedDate = DateTime.Parse($"{columnName} {year}");
+
+            var serviceValue = gridRow.Cells[ColumnServiceText].Value?.ToString() ?? string.Empty;
+            var isWednesdayAssignment = serviceValue.Contains(WednesdayText, StringComparison.OrdinalIgnoreCase);
+            var isEveningAssignment = serviceValue.Contains(EveningText, StringComparison.OrdinalIgnoreCase);
+            var isMorningAssignment = serviceValue.Contains(MorningText, StringComparison.OrdinalIgnoreCase);
+
+            ServiceType? serviceType = isWednesdayAssignment ? ServiceType.Wednesday
+                : isEveningAssignment ? ServiceType.Sunday_PM
+                : isMorningAssignment ? ServiceType.Sunday_AM
+                : null;
+
+            if (serviceType == null)
+                throw new Exception("Unable to determine service type for the selected assignment.");
+            
+            selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
 
             // Check if this is a text input assignment
             if (dutyTypeToEdit.ManualAssignmentType == ManualAssignmentType.TextInput)
@@ -806,11 +824,6 @@ public partial class Form1 : Form
                 {
                     gridRow.Cells[e.ColumnIndex].Value = inputBox.Text;
                     
-                    var columnName = dataGrid.Columns[e.ColumnIndex].Name;
-                    var year = (int)yearSelect.SelectedItem!;
-                    var selectedDate = DateTime.Parse($"{columnName} {year}");
-                    selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
-
                     await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, null, inputBox.Text);
                     await CheckForDuplicates(columnName);
                 }
@@ -829,12 +842,6 @@ public partial class Form1 : Form
                     return;
                 }
 
-                // Parse column date with current year and month from the schedule
-                var columnName = dataGrid.Columns[e.ColumnIndex].Name;
-                var year = (int)yearSelect.SelectedItem!;
-                var month = monthSelect.SelectedIndex + 1;
-                var selectedDate = DateTime.Parse($"{columnName} {year}");
-                
                 // Calculate last Sunday of the month
                 var firstDayOfNextMonth = new DateTime(year, month, 1).AddMonths(1);
                 var lastSunday = firstDayOfNextMonth.AddDays(-1);
@@ -856,11 +863,6 @@ public partial class Form1 : Form
             {
                 // Update the grid cell
                 dataGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = assignmentForm.SelectedMember.FullName;
-
-                var columnName = dataGrid.Columns[e.ColumnIndex].Name;
-                var year = (int)yearSelect.SelectedItem!;
-                var selectedDate = DateTime.Parse($"{columnName} {year}");
-                selectedDate = serviceType == ServiceType.Wednesday ? selectedDate.AddDays(3) : selectedDate;
 
                 // Save changes to database
                 await SaveAssignment(selectedDate, dutyTypeToEdit, serviceType, assignmentForm.SelectedMember);
@@ -1010,8 +1012,15 @@ public partial class Form1 : Form
         return null;
     }
 
-    private async Task SaveAssignment(DateTime selectedDate, DutyType dutyTypeToEdit, ServiceType serviceType, Member? selectedMember = null, string? notes = null)
+    private async Task SaveAssignment(DateTime selectedDate, DutyType dutyTypeToEdit, ServiceType? serviceType, Member? selectedMember = null, string? notes = null)
     {
+        if (serviceType == null)
+        {
+            // Error out if schedule not found
+            MessageBox.Show("A service type is required to save this assignment.", ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+        
         var schedule = await _context.GeneratedSchedules
             .Include(s => s.DailySchedules)
                 .ThenInclude(d => d.Assignments)
@@ -1057,7 +1066,7 @@ public partial class Form1 : Form
         {
             Member = selectedMember ?? null,
             DutyType = dutyTypeToEdit,
-            ServiceType = serviceType,
+            ServiceType = serviceType!,
             Notes = notes
         });
 
