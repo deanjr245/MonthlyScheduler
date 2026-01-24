@@ -97,6 +97,7 @@ public static class AppStringConstants
     public const string MorningText = "Morning";
     public const string EveningText = "Evening";
     public const string WednesdayText = "Wednesday";
+    public const string MonthlyText = "Monthly";
     
     #endregion
 

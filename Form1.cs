@@ -766,10 +766,12 @@ public partial class Form1 : Form
             var isWednesdayAssignment = serviceValue.Contains(WednesdayText, StringComparison.OrdinalIgnoreCase);
             var isEveningAssignment = serviceValue.Contains(EveningText, StringComparison.OrdinalIgnoreCase);
             var isMorningAssignment = serviceValue.Contains(MorningText, StringComparison.OrdinalIgnoreCase);
+            var isMonthlyAssignment = serviceValue.Contains(MonthlyText, StringComparison.OrdinalIgnoreCase);
 
             ServiceType? serviceType = isWednesdayAssignment ? ServiceType.Wednesday
                 : isEveningAssignment ? ServiceType.Sunday_PM
                 : isMorningAssignment ? ServiceType.Sunday_AM
+                : isMonthlyAssignment ? ServiceType.Monthly
                 : null;
 
             if (serviceType == null)
@@ -969,20 +971,6 @@ public partial class Form1 : Form
                 // After loading the schedule, check for duplicates in each assignment column
                 // Skip the Service and Duty columns
                 if (col.Index <= 1) continue;
-
-                // Get all unique member names in this column
-                var memberNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (DataGridViewRow row in dataGrid.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    
-                    var cellValue = row.Cells[col.Index].Value?.ToString();
-                    if (!string.IsNullOrWhiteSpace(cellValue))
-                    {
-                        memberNames.Add(cellValue);
-                    }
-                }
                 
                 // Check duplicates for each unique member in this column
                 await CheckForDuplicates(col.Name);
