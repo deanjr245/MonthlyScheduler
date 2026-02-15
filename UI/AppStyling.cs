@@ -3,7 +3,7 @@ namespace MonthlyScheduler.UI;
 public static class AppStyling
 {
     // Typography
-    public static readonly Font Font = new("Segoe UI", 10F, FontStyle.Regular);
+    public static readonly Font Font = new("Segoe UI", 11F, FontStyle.Regular);
     public static readonly Font FontBold = new("Segoe UI", 10F, FontStyle.Bold);
     
     // Modern, professional color scheme
@@ -18,8 +18,7 @@ public static class AppStyling
     
     // Background and text colors
     public static readonly Color DarkBackground = ColorTranslator.FromHtml("#252525");
-    // public static readonly Color WindowBackground = Color.White;
-    public static readonly Color LightBackground = Color.White;
+    public static readonly Color LightBackground = Color.WhiteSmoke;
     public static readonly Color BackgroundSecondary = Color.FromArgb(250, 250, 250); // Slightly off-white for contrast
     public static readonly Color DarkText = Color.Black;
     public static readonly Color LightText = Color.FromArgb(232, 234, 237);       // Light text for dark backgrounds

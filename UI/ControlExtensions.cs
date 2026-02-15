@@ -7,7 +7,7 @@ public static class ControlExtensions
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         button.BackColor = AppStyling.Primary;
-        button.ForeColor = Color.White;
+        button.ForeColor = AppStyling.LightBackground;
         button.Font = AppStyling.Font;
         button.Padding = new Padding(5, 0, 5, 0);
         button.Cursor = Cursors.Hand;
@@ -19,7 +19,7 @@ public static class ControlExtensions
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         button.BackColor = AppStyling.Secondary;
-        button.ForeColor = Color.White;
+        button.ForeColor = AppStyling.LightBackground;
         button.Font = AppStyling.Font;
         button.Padding = new Padding(5, 0, 5, 0);
         button.Cursor = Cursors.Hand;
@@ -30,8 +30,8 @@ public static class ControlExtensions
     {
         grid.BorderStyle = BorderStyle.None;
         grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
-        grid.RowsDefaultCellStyle.BackColor = Color.White;
-        grid.BackgroundColor = Color.White;
+        grid.RowsDefaultCellStyle.BackColor = AppStyling.LightBackground;
+        grid.BackgroundColor = AppStyling.LightBackground;
         grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 245, 255);
         grid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
         grid.DefaultCellStyle.ForeColor = Color.FromArgb(33, 37, 41);
@@ -39,7 +39,7 @@ public static class ControlExtensions
         grid.DefaultCellStyle.Font = AppStyling.Font;
         grid.ColumnHeadersDefaultCellStyle.Font = AppStyling.FontBold;
         grid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
-        grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+        grid.ColumnHeadersDefaultCellStyle.ForeColor = AppStyling.LightBackground;
         grid.EnableHeadersVisualStyles = false;
         grid.GridColor = AppStyling.Border;
         grid.RowHeadersVisible = false;
@@ -57,7 +57,7 @@ public static class ControlExtensions
     {
         comboBox.FlatStyle = FlatStyle.Flat;
         comboBox.Font = AppStyling.Font;
-        comboBox.BackColor = Color.White;
+        comboBox.BackColor = AppStyling.LightBackground;
         comboBox.ForeColor = Color.FromArgb(33, 37, 41);
         comboBox.Height = 35;
     }
