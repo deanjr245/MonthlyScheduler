@@ -1009,12 +1009,17 @@ public partial class Form1 : Form
             return;
         }
         
+        // Determine which schedule this date belongs to by finding the Sunday of the week
+        // Wednesdays that fall into the next month are still part of the previous month's schedule
+        // if their Sunday falls in the previous month
+        var weekStartDate = selectedDate.AddDays(-(int)selectedDate.DayOfWeek);
+        
         var schedule = await _context.GeneratedSchedules
             .Include(s => s.DailySchedules)
                 .ThenInclude(d => d.Assignments)
             .FirstOrDefaultAsync(s => 
-                s.Year == selectedDate.Year && 
-                s.Month == selectedDate.Month);
+                s.Year == weekStartDate.Year && 
+                s.Month == weekStartDate.Month);
 
         if (schedule == null)
         {

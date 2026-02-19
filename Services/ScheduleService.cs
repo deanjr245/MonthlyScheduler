@@ -304,8 +304,13 @@ public class ScheduleService
                         }
                     }
 
-                    // Randomly select a member
-                    var selectedMember = availableMembers[_random.Next(availableMembers.Count)];
+                    // Select member with fewest monthly assignments (weighted randomization)
+                    // This ensures even distribution across all members
+                    var minAssignments = availableMembers.Min(m => memberMonthlyCount[m]);
+                    var lowestCountMembers = availableMembers
+                        .Where(m => memberMonthlyCount[m] == minAssignments)
+                        .ToList();
+                    var selectedMember = lowestCountMembers[_random.Next(lowestCountMembers.Count)];
                     duties[dutyType] = selectedMember;
 
                     // Track all assignments
