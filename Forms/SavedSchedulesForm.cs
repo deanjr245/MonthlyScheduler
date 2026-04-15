@@ -30,21 +30,23 @@ public class SavedSchedulesForm : Form
         _btnManageFooterText = new Button
         {
             Text = "Manage PDF Footer Text",
-            Width = 180
+            Width = 200
         };
         _btnManageFooterText.ApplyModernStyle();
         _btnManageFooterText.Click += BtnManageFooterText_Click;
 
         _btnDelete = new Button
         {
-            Text = "Delete Schedule"
+            Text = "Delete Schedule",
+            Width = 150
         };
         _btnDelete.ApplySecondaryStyle();
         _btnDelete.Click += BtnDelete_Click;
 
         _btnLoad = new Button
         {
-            Text = "Load Schedule"
+            Text = "Load Schedule",
+            Width = 150
         };
         _btnLoad.ApplyModernStyle();
         _btnLoad.Click += BtnLoad_Click;
@@ -52,6 +54,7 @@ public class SavedSchedulesForm : Form
         _btnClose = new Button
         {
             Text = "Close",
+            Width = 100,
             DialogResult = DialogResult.Cancel
         };
         _btnClose.ApplySecondaryStyle();
@@ -73,6 +76,7 @@ public class SavedSchedulesForm : Form
         _schedulesGrid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
         _schedulesGrid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
         _schedulesGrid.CellClick += SchedulesGrid_CellClick;
+        _schedulesGrid.CellContentClick += SchedulesGrid_CellClick;
 
         // ===== Create layout structure =====
         var mainLayout = new TableLayoutPanel
