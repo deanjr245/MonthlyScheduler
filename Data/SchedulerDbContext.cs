@@ -78,6 +78,20 @@ public class SchedulerDbContext : DbContext
             .HasForeignKey(da => da.DutyTypeId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Configure Member -> DutyAssignment relationship
+        modelBuilder.Entity<DutyAssignment>()
+            .HasOne(da => da.Member)
+            .WithMany(m => m.Assignments)
+            .HasForeignKey(da => da.MemberId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure ScheduleAssignment -> Member relationship
+        modelBuilder.Entity<ScheduleAssignment>()
+            .HasOne(sa => sa.Member)
+            .WithMany()
+            .HasForeignKey(sa => sa.MemberId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Configure GeneratedSchedule -> DailySchedule relationship
         modelBuilder.Entity<GeneratedSchedule>()
             .HasMany(s => s.DailySchedules)
