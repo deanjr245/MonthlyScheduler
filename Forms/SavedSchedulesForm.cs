@@ -75,7 +75,6 @@ public class SavedSchedulesForm : Form
         _schedulesGrid.DefaultCellStyle.SelectionForeColor = AppStyling.DarkText;
         _schedulesGrid.ColumnHeadersDefaultCellStyle.BackColor = AppStyling.Primary;
         _schedulesGrid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-        _schedulesGrid.CellClick += SchedulesGrid_CellClick;
         _schedulesGrid.CellContentClick += SchedulesGrid_CellClick;
 
         // ===== Create layout structure =====
