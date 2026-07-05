@@ -18,6 +18,8 @@ public class DutyType
     public bool IsMonthlyDuty { get; set; }
     public MonthlyDutyFrequency? MonthlyDutyFrequency { get; set; }
     public bool SkipLastSundayEvening { get; set; }
+    public int? AssignmentCategoryId { get; set; }
+    public AssignmentCategory? AssignmentCategory { get; set; }
 
     // Navigation properties
     public List<MemberDuty> MemberDuties { get; set; } = new();

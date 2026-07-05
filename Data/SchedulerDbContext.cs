@@ -14,6 +14,7 @@ public class SchedulerDbContext : DbContext
     public DbSet<DutyAssignment> DutyAssignments { get; set; }
     public DbSet<MemberDuty> MemberDuties { get; set; }
     public DbSet<DutyType> DutyTypes { get; set; }
+    public DbSet<AssignmentCategory> AssignmentCategories { get; set; }
     public DbSet<GeneratedSchedule> GeneratedSchedules { get; set; }
     public DbSet<DailySchedule> DailySchedules { get; set; }
     public DbSet<ScheduleAssignment> ScheduleAssignments { get; set; }
@@ -77,6 +78,24 @@ public class SchedulerDbContext : DbContext
             .WithMany(dt => dt.DutyAssignments)
             .HasForeignKey(da => da.DutyTypeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DutyAssignment>()
+            .HasOne(da => da.AssignmentCategory)
+            .WithMany(ac => ac.DutyAssignments)
+            .HasForeignKey(da => da.AssignmentCategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<DutyType>()
+            .HasOne(dt => dt.AssignmentCategory)
+            .WithMany(ac => ac.DutyTypes)
+            .HasForeignKey(dt => dt.AssignmentCategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ScheduleAssignment>()
+            .HasOne(sa => sa.AssignmentCategory)
+            .WithMany(ac => ac.ScheduleAssignments)
+            .HasForeignKey(sa => sa.AssignmentCategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Configure Member -> DutyAssignment relationship
         modelBuilder.Entity<DutyAssignment>()

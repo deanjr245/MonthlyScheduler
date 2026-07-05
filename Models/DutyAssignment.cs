@@ -9,9 +9,11 @@ public class DutyAssignment
     public int ServiceScheduleId { get; set; }
     public int MemberId { get; set; }
     public int DutyTypeId { get; set; }
+    public int? AssignmentCategoryId { get; set; }
 
     // Navigation properties
     public ServiceSchedule ServiceSchedule { get; set; } = null!;
     public Member Member { get; set; } = null!;
     public DutyType DutyType { get; set; } = null!;
+    public AssignmentCategory? AssignmentCategory { get; set; }
 }

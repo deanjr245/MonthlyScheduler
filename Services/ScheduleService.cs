@@ -31,7 +31,7 @@ public class ScheduleService
         var weeklySchedules = new List<WeeklySchedule>();
         var monthlyAssignments = new Dictionary<(int DutyId, ServiceType Service), HashSet<Member>>();
         var memberWeeklyAssignments = new Dictionary<DateTime, HashSet<Member>>();
-        var dutyTypes = await _context.DutyTypes.AsNoTracking().ToListAsync();
+        var dutyTypes = await _context.DutyTypes.Include(dt => dt.AssignmentCategory).AsNoTracking().ToListAsync();
 
         // Pre-filter duty types by service to avoid repeated filtering in the loop
         var morningDuties = dutyTypes.Where(dt => dt.IsMorningDuty).OrderBy(dt => dt.OrderIndexAM).ToList();
@@ -47,6 +47,7 @@ public class ScheduleService
 
         // Initialize member monthly counts using LINQ
         var memberMonthlyCount = members.ToDictionary(m => m, m => 0);
+        var memberCategoryMonthlyCount = members.ToDictionary(m => m, _ => new Dictionary<int, int>());
         
         // Initialize monthly assignment tracking using LINQ
         var serviceTypes = new[] { ServiceType.Sunday_AM, ServiceType.Sunday_PM, ServiceType.Wednesday, ServiceType.Monthly };
@@ -66,12 +67,12 @@ public class ScheduleService
             // Create Sunday schedule
             var sundaySchedule = new Schedule(sundayDate);
             AssignDuties(sundaySchedule.AMDuties, members, monthlyAssignments, ServiceType.Sunday_AM,
-                morningDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+                morningDuties, memberMonthlyCount, memberCategoryMonthlyCount, memberWeeklyAssignments, sundayDate);
             
             // Check if this is the last Sunday evening
             var isLastSunday = sundayDate.Date == lastSunday.Date;
             AssignDuties(sundaySchedule.PMDuties, members, monthlyAssignments, ServiceType.Sunday_PM,
-                eveningDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate, isLastSunday);
+                eveningDuties, memberMonthlyCount, memberCategoryMonthlyCount, memberWeeklyAssignments, sundayDate, isLastSunday);
             weeklySchedule.SundaySchedule = sundaySchedule;
 
             // Create Wednesday schedule - include it if the week starts in our target month
@@ -80,7 +81,7 @@ public class ScheduleService
             {
                 var wednesdaySchedule = new Schedule(wednesdayDate);
                 AssignDuties(wednesdaySchedule.WednesdayDuties, members, monthlyAssignments, ServiceType.Wednesday,
-                    wednesdayDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+                    wednesdayDuties, memberMonthlyCount, memberCategoryMonthlyCount, memberWeeklyAssignments, sundayDate);
                 weeklySchedule.WednesdaySchedule = wednesdaySchedule;
             }
 
@@ -88,7 +89,7 @@ public class ScheduleService
             if (serviceIndependentMonthlyDuties.Any())
             {
                 AssignDuties(sundaySchedule.MonthlyDuties, members, monthlyAssignments, ServiceType.Monthly,
-                    serviceIndependentMonthlyDuties, memberMonthlyCount, memberWeeklyAssignments, sundayDate);
+                    serviceIndependentMonthlyDuties, memberMonthlyCount, memberCategoryMonthlyCount, memberWeeklyAssignments, sundayDate);
             }
 
             weeklySchedules.Add(weeklySchedule);
@@ -129,6 +130,7 @@ public class ScheduleService
                     {
                         MemberId = member.Id,
                         DutyTypeId = dutyType.Id,
+                        AssignmentCategoryId = dutyType.AssignmentCategoryId,
                         ServiceType = ServiceType.Sunday_AM,
                         DailyScheduleId = dailySchedule.Id
                     };
@@ -145,6 +147,7 @@ public class ScheduleService
                     {
                         MemberId = member.Id,
                         DutyTypeId = dutyType.Id,
+                        AssignmentCategoryId = dutyType.AssignmentCategoryId,
                         ServiceType = ServiceType.Sunday_PM,
                         DailyScheduleId = dailySchedule.Id
                     };
@@ -161,6 +164,7 @@ public class ScheduleService
                     {
                         MemberId = member.Id,
                         DutyTypeId = dutyType.Id,
+                        AssignmentCategoryId = dutyType.AssignmentCategoryId,
                         ServiceType = ServiceType.Monthly,
                         DailyScheduleId = dailySchedule.Id
                     };
@@ -189,6 +193,7 @@ public class ScheduleService
                     {
                         MemberId = member.Id,
                         DutyTypeId = dutyType.Id,
+                        AssignmentCategoryId = dutyType.AssignmentCategoryId,
                         ServiceType = ServiceType.Wednesday,
                         DailyScheduleId = dailySchedule.Id
                     };
@@ -210,6 +215,7 @@ public class ScheduleService
         Dictionary<(int DutyId, ServiceType Service), HashSet<Member>> monthlyAssignments,
         ServiceType serviceType, List<DutyType> dutyTypes,
         Dictionary<Member, int> memberMonthlyCount,
+        Dictionary<Member, Dictionary<int, int>> memberCategoryMonthlyCount,
         Dictionary<DateTime, HashSet<Member>> memberWeeklyAssignments,
         DateTime weekStartDate, bool isLastSundayEvening = false)
     {
@@ -263,6 +269,9 @@ public class ScheduleService
 
                 if (eligibleMembers.Any())
                 {
+                    var categoryId = dutyType.AssignmentCategoryId ?? -1;
+                    var categoryLimit = dutyType.AssignmentCategory?.MaxAssignmentsPerMonth ?? 1;
+
                     // Filter out members based on all constraints
                     var availableMembers = eligibleMembers
                         .Where(m => 
@@ -274,7 +283,9 @@ public class ScheduleService
                             (dutyType.ExemptFromServiceMax || memberMonthlyCount[m] <= 3) &&
                             // Not used this week
                             (!memberWeeklyAssignments.ContainsKey(weekStartDate) || 
-                             !memberWeeklyAssignments[weekStartDate].Contains(m)))
+                             !memberWeeklyAssignments[weekStartDate].Contains(m)) &&
+                            // Not over the category limit for this month
+                            (categoryId < 0 || !memberCategoryMonthlyCount[m].TryGetValue(categoryId, out var categoryCount) || categoryCount < categoryLimit))
                         .ToList();
 
                     // If no members available, gradually relax constraints
@@ -285,7 +296,8 @@ public class ScheduleService
                             .Where(m => 
                                 !monthlyAssignments[(dutyType.Id, serviceType)].Contains(m) &&
                                 !assignedToService.Contains(m) &&
-                                memberMonthlyCount[m] <= 3)
+                                memberMonthlyCount[m] <= 3 &&
+                                (categoryId < 0 || !memberCategoryMonthlyCount[m].TryGetValue(categoryId, out var categoryCount) || categoryCount < categoryLimit))
                             .ToList();
 
                         if (!availableMembers.Any())
@@ -319,6 +331,14 @@ public class ScheduleService
                     
                     // Update monthly count
                     memberMonthlyCount[selectedMember]++;
+                    if (categoryId >= 0)
+                    {
+                        if (!memberCategoryMonthlyCount[selectedMember].ContainsKey(categoryId))
+                        {
+                            memberCategoryMonthlyCount[selectedMember][categoryId] = 0;
+                        }
+                        memberCategoryMonthlyCount[selectedMember][categoryId]++;
+                    }
                     
                     // Update weekly assignments
                     if (!memberWeeklyAssignments.ContainsKey(weekStartDate))
