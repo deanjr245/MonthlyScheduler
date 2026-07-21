@@ -704,9 +704,9 @@ public partial class Form1 : Form
     {
         using SaveFileDialog saveFileDialog = new()
         {
-            Filter = "CSV Files|*.csv",
-            Title = "Export Members to CSV",
-            FileName = $"Members_{DateTime.Now:yyyyMMdd}.csv"
+            Filter = "Excel Files|*.xlsx",
+            Title = "Export Members",
+            FileName = $"Members_{DateTime.Now:yyyyMMdd}.xlsx"
         };
 
         if (saveFileDialog.ShowDialog() == DialogResult.OK)
@@ -714,8 +714,10 @@ public partial class Form1 : Form
             try
             {
                 var exportService = new MemberExportService();
-                
-                await exportService.ExportMembersToCSV(_context, saveFileDialog.FileName);
+                var sheetName = "Members";
+
+                await exportService.ExportMembers(_context, saveFileDialog.FileName, sheetName);
+
                 MessageBox.Show(MembersExportedSuccess, ExportCompleteTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -1072,10 +1074,11 @@ public partial class Form1 : Form
             return;
 
         // Find the column index by name
-        if (!dataGrid.Columns.Contains(columnName))
+        var column = dataGrid.Columns[columnName];
+        if (column == null)
             return;
 
-        int columnIndex = dataGrid.Columns[columnName].Index;
+        int columnIndex = column.Index;
 
         if (columnIndex < 0)
             return;
