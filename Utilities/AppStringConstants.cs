@@ -87,6 +87,8 @@ public static class AppStringConstants
     public const string SongServiceText = "Song Service";
     public const string ServiceColumnName = "Service";
     public const string DutyColumnName = "Duty";
+    public const string ScheduleAlreadyExists = "A schedule for this month and year already exists.";
+    public const string WarningTitle = "Warning";
     #endregion
         
     // Misc
@@ -107,4 +109,5 @@ public static class AppStringConstants
         SongServiceText,
         ClickToAssignText
     ];
+
 }

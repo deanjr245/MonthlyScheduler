@@ -6,6 +6,7 @@ using MonthlyScheduler.Models;
 using MonthlyScheduler.Exceptions;
 using MonthlyScheduler.UI;
 using static MonthlyScheduler.Utilities.AppStringConstants;
+using MonthlyScheduler.Utilities;
 
 namespace MonthlyScheduler;
 
@@ -373,6 +374,17 @@ public partial class Form1 : Form
         {
             var selectedMonth = monthSelect.SelectedIndex + 1; // Adding 1 because SelectedIndex is 0-based
             var selectedYear = (int)yearSelect.SelectedItem!;
+
+            // Check if a schedule already exists for this year/month
+            bool exists = await _context.GeneratedSchedules
+                .AsNoTracking()
+                .AnyAsync(s => s.Year == selectedYear && s.Month == selectedMonth);
+
+            if (exists)
+            {
+                MessageBox.Show(ScheduleAlreadyExists, WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             var scheduleService = new ScheduleService(_context);
             _ = await scheduleService.GenerateMonthlySchedule(selectedYear, selectedMonth);
