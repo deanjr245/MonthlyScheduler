@@ -487,7 +487,9 @@ public partial class Form1 : Form
             // Pre-build a lookup for member duties for O(1) access
             var memberDutyLookup = members.ToDictionary(
                 m => m.Id,
-                m => new HashSet<int>(m.AvailableDuties.Select(d => d.DutyTypeId))
+                m => new HashSet<int>(m.AvailableDuties
+                    .Where(d => d.IsWilling && d.UseForScheduling)
+                    .Select(d => d.DutyTypeId))
             );
 
             // Populate rows - much faster than reflection

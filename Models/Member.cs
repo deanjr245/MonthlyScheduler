@@ -15,23 +15,40 @@ public class Member
 
     public string FullName => $"{FirstName} {LastName}";
 
-    public void AddDuty(DutyType dutyType)
+    public void AddDuty(DutyType dutyType, bool isWilling = true, bool useForScheduling = true)
     {
-        if (!AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id))
+        if (!isWilling)
         {
-            var memberDuty = new MemberDuty 
-            { 
+            useForScheduling = false;
+        }
+
+        var existing = AvailableDuties.FirstOrDefault(d => d.DutyTypeId == dutyType.Id);
+        if (existing == null)
+        {
+            var memberDuty = new MemberDuty
+            {
                 MemberId = Id,
                 Member = this,
-                DutyTypeId = dutyType.Id, 
-                DutyType = dutyType 
+                DutyTypeId = dutyType.Id,
+                DutyType = dutyType,
+                IsWilling = isWilling,
+                UseForScheduling = useForScheduling
             };
             AvailableDuties.Add(memberDuty);
+            return;
         }
+
+        existing.IsWilling = isWilling;
+        existing.UseForScheduling = useForScheduling && isWilling;
     }
 
     public bool IsAvailableForDuty(DutyType dutyType)
     {
-        return AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id);
+        return AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id && d.IsWilling && d.UseForScheduling);
+    }
+
+    public bool IsWillingForDuty(DutyType dutyType)
+    {
+        return AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id && d.IsWilling);
     }
 }

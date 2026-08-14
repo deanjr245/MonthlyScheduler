@@ -43,7 +43,10 @@ public class MemberExportService
         for (var rowIndex = 0; rowIndex < members.Count; rowIndex++)
         {
             var member = members[rowIndex];
-            var memberDutyIds = member.AvailableDuties.Select(d => d.DutyTypeId).ToHashSet();
+            var memberDutyIds = member.AvailableDuties
+                .Where(d => d.IsWilling && d.UseForScheduling)
+                .Select(d => d.DutyTypeId)
+                .ToHashSet();
             var row = rowIndex + 2;
 
             worksheet.Cell(row, 1).Value = member.LastName;

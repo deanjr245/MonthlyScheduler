@@ -11,7 +11,7 @@ public partial class MemberForm : Form
 {
     private readonly SchedulerDbContext _context;
     private readonly Member? _member;
-    private readonly Dictionary<int, CheckBox> _dutyCheckboxes = new();
+    private readonly Dictionary<int, (CheckBox WillingCheckBox, CheckBox ScheduleCheckBox, DutyType DutyType)> _dutyCheckboxes = new();
 
     public MemberForm(SchedulerDbContext context, Member? member = null)
     {
@@ -121,15 +121,59 @@ public partial class MemberForm : Form
 
         foreach (var dutyType in dutyTypes)
         {
-            var chk = new CheckBox
+            var dutyRow = new TableLayoutPanel
+            {
+                ColumnCount = 3,
+                AutoSize = true,
+                Margin = new Padding(5),
+                Dock = DockStyle.Top
+            };
+            dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            var dutyLabel = new Label
             {
                 Text = dutyType.Name,
-                Tag = dutyType,  // Store the full duty type object
                 AutoSize = true,
-                Margin = new Padding(5)
+                Dock = DockStyle.Fill,
+                Margin = new Padding(3)
             };
-            _dutyCheckboxes[dutyType.Id] = chk;
-            dutiesLayout.Controls.Add(chk);
+            dutyLabel.ApplyModernStyle();
+
+            var scheduleCheck = new CheckBox
+            {
+                Text = "Schedule",
+                AutoSize = true,
+                Margin = new Padding(5),
+                Enabled = false,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var willingCheck = new CheckBox
+            {
+                Text = "Willing",
+                AutoSize = true,
+                Margin = new Padding(5),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            willingCheck.CheckedChanged += (sender, args) =>
+            {
+                scheduleCheck.Enabled = willingCheck.Checked;
+                if (!willingCheck.Checked)
+                {
+                    scheduleCheck.Checked = false;
+                }
+            };
+
+            _dutyCheckboxes[dutyType.Id] = (willingCheck, scheduleCheck, dutyType);
+
+            dutyRow.Controls.Add(dutyLabel, 0, 0);
+            dutyRow.Controls.Add(scheduleCheck, 1, 0);
+            dutyRow.Controls.Add(willingCheck, 2, 0);
+
+            dutiesLayout.Controls.Add(dutyRow);
         }
 
         dutiesGroup.Controls.Add(dutiesLayout);
@@ -180,10 +224,22 @@ public partial class MemberForm : Form
             chkFormReceived.Checked = _member.HasSubmittedForm;
             chkExcludeFromScheduling.Checked = _member.ExcludeFromScheduling;
 
-            var memberDutyIds = _member.AvailableDuties.Select(d => d.DutyTypeId).ToHashSet();
+            var memberDutyLookup = _member.AvailableDuties.ToDictionary(d => d.DutyTypeId);
+
             foreach (var dutyCheckbox in _dutyCheckboxes)
             {
-                dutyCheckbox.Value.Checked = memberDutyIds.Contains(dutyCheckbox.Key);
+                if (memberDutyLookup.TryGetValue(dutyCheckbox.Key, out var memberDuty))
+                {
+                    dutyCheckbox.Value.WillingCheckBox.Checked = memberDuty.IsWilling;
+                    dutyCheckbox.Value.ScheduleCheckBox.Checked = memberDuty.UseForScheduling;
+                    dutyCheckbox.Value.ScheduleCheckBox.Enabled = memberDuty.IsWilling;
+                }
+                else
+                {
+                    dutyCheckbox.Value.WillingCheckBox.Checked = false;
+                    dutyCheckbox.Value.ScheduleCheckBox.Checked = false;
+                    dutyCheckbox.Value.ScheduleCheckBox.Enabled = false;
+                }
             }
         }
     }
@@ -211,11 +267,14 @@ public partial class MemberForm : Form
                 };
 
                 // Add selected duties
-                foreach (var duty in _dutyCheckboxes.Where(d => d.Value.Checked))
+                foreach (var duty in _dutyCheckboxes.Values)
                 {
-                    if (duty.Value.Tag is DutyType dutyType)
+                    if (duty.WillingCheckBox.Checked || duty.ScheduleCheckBox.Checked)
                     {
-                        newMember.AddDuty(dutyType);
+                        newMember.AddDuty(
+                            duty.DutyType,
+                            isWilling: duty.WillingCheckBox.Checked,
+                            useForScheduling: duty.ScheduleCheckBox.Checked);
                     }
                 }
 
@@ -248,11 +307,17 @@ public partial class MemberForm : Form
                     // Get all duty types from context to ensure they're tracked
                     var dutyTypes = await _context.DutyTypes.ToDictionaryAsync(dt => dt.Id);
                     
-                    foreach (var duty in _dutyCheckboxes.Where(d => d.Value.Checked))
+                    foreach (var duty in _dutyCheckboxes.Values)
                     {
-                        if (duty.Value.Tag is DutyType dutyType && dutyTypes.TryGetValue(dutyType.Id, out var trackedDutyType))
+                        if (duty.WillingCheckBox.Checked || duty.ScheduleCheckBox.Checked)
                         {
-                            member.AddDuty(trackedDutyType);
+                            if (dutyTypes.TryGetValue(duty.DutyType.Id, out var trackedDutyType))
+                            {
+                                member.AddDuty(
+                                    trackedDutyType,
+                                    isWilling: duty.WillingCheckBox.Checked,
+                                    useForScheduling: duty.ScheduleCheckBox.Checked);
+                            }
                         }
                     }
 
