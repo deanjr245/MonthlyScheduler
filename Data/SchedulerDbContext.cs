@@ -46,7 +46,8 @@ public class SchedulerDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={DbPath}");
+        options.UseLazyLoadingProxies()
+            .UseSqlite($"Data Source={DbPath}");
         
         #if DEBUG
         // Enable logging only in debug builds

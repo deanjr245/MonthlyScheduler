@@ -426,13 +426,6 @@ public class SavedSchedulesForm : Form
 
             // NOW load the full schedule with all related data
             var fullSchedule = await _context.GeneratedSchedules
-                .Include(s => s.DailySchedules)
-                    .ThenInclude(d => d.Assignments)
-                        .ThenInclude(a => a.Member)
-                .Include(s => s.DailySchedules)
-                    .ThenInclude(d => d.Assignments)
-                        .ThenInclude(a => a.DutyType)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
             if (fullSchedule != null)

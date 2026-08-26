@@ -68,7 +68,6 @@ public class MemberExportService
     {
         return await context.Members
             .Include(m => m.AvailableDuties)
-            .ThenInclude(d => d.DutyType)
             .OrderBy(m => m.ExcludeFromScheduling)
             .ThenBy(m => m.LastName)
             .ThenBy(m => m.FirstName)

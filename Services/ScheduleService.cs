@@ -19,7 +19,6 @@ public class ScheduleService
         // Get all active members
         var members = await _context.Members
             .Include(m => m.AvailableDuties)
-                .ThenInclude(ad => ad.DutyType)
             .Where(m => !m.ExcludeFromScheduling)
             .ToListAsync();
 

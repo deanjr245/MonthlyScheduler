@@ -12,8 +12,8 @@ public class DutyAssignment
     public int? AssignmentCategoryId { get; set; }
 
     // Navigation properties
-    public ServiceSchedule ServiceSchedule { get; set; } = null!;
-    public Member Member { get; set; } = null!;
-    public DutyType DutyType { get; set; } = null!;
-    public AssignmentCategory? AssignmentCategory { get; set; }
+    public virtual ServiceSchedule ServiceSchedule { get; set; } = null!;
+    public virtual Member Member { get; set; } = null!;
+    public virtual DutyType DutyType { get; set; } = null!;
+    public virtual AssignmentCategory? AssignmentCategory { get; set; }
 }

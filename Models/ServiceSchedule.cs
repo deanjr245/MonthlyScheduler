@@ -10,7 +10,7 @@ public class ServiceSchedule
     public Service Service { get; set; }
 
     // Navigation property for assignments
-    public List<DutyAssignment> Assignments { get; set; } = new();
+    public virtual List<DutyAssignment> Assignments { get; set; } = new();
 
     public ServiceSchedule()
     {

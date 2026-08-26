@@ -9,6 +9,6 @@ public class MemberDuty
     public bool UseForScheduling { get; set; }
 
     // Navigation properties
-    public Member Member { get; set; } = null!;
-    public DutyType DutyType { get; set; } = null!;
+    public virtual Member Member { get; set; } = null!;
+    public virtual DutyType DutyType { get; set; } = null!;
 }

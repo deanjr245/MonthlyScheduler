@@ -8,5 +8,5 @@ public class GeneratedSchedule
     public int Year { get; set; }
     public int Month { get; set; }
     public DateTime GeneratedDate { get; set; }
-    public List<DailySchedule> DailySchedules { get; set; } = new();
+    public virtual List<DailySchedule> DailySchedules { get; set; } = new();
 }

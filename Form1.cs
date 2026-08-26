@@ -405,9 +405,9 @@ public partial class Form1 : Form
         var mainLayout = (TableLayoutPanel)Controls[0];
         var rightPanel = (TableLayoutPanel)mainLayout.Controls[1];
         
-        // Remove all labels from position (0, 0) in the right panel
+        // Remove the title row controls from the previous schedule view
         var controlsToRemove = rightPanel.Controls.Cast<Control>()
-            .Where(c => c is Label && rightPanel.GetRow(c) == 0)
+            .Where(c => rightPanel.GetRow(c) == 0)
             .ToList();
         
         foreach (var control in controlsToRemove)
@@ -666,7 +666,6 @@ public partial class Form1 : Form
 
             // Find the member in the database
             var member = await _context.Members
-                .Include(m => m.AvailableDuties)
                 .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
 
             if (member == null)
@@ -933,10 +932,37 @@ public partial class Form1 : Form
             Font = new Font(AppStyling.Font.FontFamily, 16, FontStyle.Bold)
         };
         
-        // Find the right panel and add the label to it
+        // Find the right panel and add the title and summary action to it
         var mainLayout = (TableLayoutPanel)Controls[0];
         var rightPanel = (TableLayoutPanel)mainLayout.Controls[1];
-        rightPanel.Controls.Add(lblScheduleTitle, 0, 0);
+
+        var scheduleTitlePanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            AutoSize = true,
+            Margin = new Padding(0)
+        };
+        scheduleTitlePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        scheduleTitlePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        var assignmentSummaryButton = new Button
+        {
+            Text = "View Member Assignment Counts",
+            AutoSize = true,
+            Anchor = AnchorStyles.Right,
+            Margin = new Padding(0, 0, 0, 10)
+        };
+        assignmentSummaryButton.ApplyModernStyle();
+        assignmentSummaryButton.Click += (_, _) =>
+        {
+            using var summaryForm = new Forms.MemberAssignmentSummaryForm(context, year, month);
+            summaryForm.ShowDialog(this);
+        };
+
+        scheduleTitlePanel.Controls.Add(lblScheduleTitle, 0, 0);
+        scheduleTitlePanel.Controls.Add(assignmentSummaryButton, 1, 0);
+        rightPanel.Controls.Add(scheduleTitlePanel, 0, 0);
 
         // Update titles
         lblScheduleTitle.Text = $"{monthSelect.Text} {year}";

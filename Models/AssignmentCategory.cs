@@ -7,7 +7,7 @@ public class AssignmentCategory
     public string? Description { get; set; }
     public int MaxAssignmentsPerMonth { get; set; } = 1;
 
-    public List<DutyType> DutyTypes { get; set; } = new();
-    public List<ScheduleAssignment> ScheduleAssignments { get; set; } = new();
-    public List<DutyAssignment> DutyAssignments { get; set; } = new();
+    public virtual List<DutyType> DutyTypes { get; set; } = new();
+    public virtual List<ScheduleAssignment> ScheduleAssignments { get; set; } = new();
+    public virtual List<DutyAssignment> DutyAssignments { get; set; } = new();
 }

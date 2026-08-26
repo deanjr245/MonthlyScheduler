@@ -289,7 +289,6 @@ public partial class MemberForm : Form
                     // Updating existing member
                     var member = await _context.Members
                         .Include(m => m.AvailableDuties)
-                        .ThenInclude(d => d.DutyType)  // Include DutyType to ensure it's loaded
                         .FirstOrDefaultAsync(m => m.Id == _member.Id);
 
                     if (member == null)

@@ -10,8 +10,8 @@ public class Member
     public bool HasSubmittedForm { get; set; }
     public bool ExcludeFromScheduling { get; set; }
     // Navigation properties
-    public List<MemberDuty> AvailableDuties { get; set; } = new();
-    public List<DutyAssignment> Assignments { get; set; } = new();
+    public virtual List<MemberDuty> AvailableDuties { get; set; } = new();
+    public virtual List<DutyAssignment> Assignments { get; set; } = new();
 
     public string FullName => $"{FirstName} {LastName}";
 

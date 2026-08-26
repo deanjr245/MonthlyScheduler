@@ -104,7 +104,6 @@ public class AssignmentEditForm : Form
         try
         {
             var members = await _context.Members
-                .Include(m => m.AvailableDuties)
                 .Where(m => !m.ExcludeFromScheduling &&
                             m.AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id && d.IsWilling))
                 .OrderBy(m => m.LastName)
