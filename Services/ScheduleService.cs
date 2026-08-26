@@ -271,12 +271,15 @@ public class ScheduleService
                 {
                     var categoryId = dutyType.AssignmentCategoryId ?? -1;
                     var categoryLimit = dutyType.AssignmentCategory?.MaxAssignmentsPerMonth ?? 1;
+                    var assignedMembersForDuty = monthlyAssignments[(dutyType.Id, serviceType)];
+                    var rotationComplete = dutyType.ExemptFromServiceMax &&
+                        eligibleMembers.All(assignedMembersForDuty.Contains);
 
                     // Filter out members based on all constraints
                     var availableMembers = eligibleMembers
                         .Where(m => 
                             // Not already assigned to this duty type in this service this month
-                            !monthlyAssignments[(dutyType.Id, serviceType)].Contains(m) &&
+                            (rotationComplete || !assignedMembersForDuty.Contains(m)) &&
                             // Not already assigned to this service
                             !assignedToService.Contains(m) &&
                             // Not used more than 3 times in the month (unless duty is exempt)
@@ -294,7 +297,7 @@ public class ScheduleService
                         // Try allowing members already used this week but under monthly limit
                         availableMembers = eligibleMembers
                             .Where(m => 
-                                !monthlyAssignments[(dutyType.Id, serviceType)].Contains(m) &&
+                                (rotationComplete || !assignedMembersForDuty.Contains(m)) &&
                                 !assignedToService.Contains(m) &&
                                 memberMonthlyCount[m] <= 3 &&
                                 (categoryId < 0 || !memberCategoryMonthlyCount[m].TryGetValue(categoryId, out var categoryCount) || categoryCount < categoryLimit))
@@ -305,7 +308,7 @@ public class ScheduleService
                             // Try allowing members already used this week but more than 3 times
                             availableMembers = eligibleMembers
                             .Where(m =>
-                                !monthlyAssignments[(dutyType.Id, serviceType)].Contains(m) &&
+                                (rotationComplete || !assignedMembersForDuty.Contains(m)) &&
                                 !assignedToService.Contains(m))
                             .ToList();
                             

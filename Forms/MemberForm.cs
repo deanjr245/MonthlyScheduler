@@ -115,6 +115,7 @@ public partial class MemberForm : Form
 
         // Load duty types from database
         var dutyTypes = _context.DutyTypes
+            .Where(dt => !(dt.ManuallyScheduled && dt.ManualAssignmentType == ManualAssignmentType.TextInput))
             .OrderBy(dt => dt.Category)
             .ThenBy(dt => dt.Name)
             .ToList();
@@ -128,7 +129,7 @@ public partial class MemberForm : Form
                 Margin = new Padding(5),
                 Dock = DockStyle.Top
             };
-            dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 285F));
             dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             dutyRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
@@ -160,7 +161,7 @@ public partial class MemberForm : Form
 
             willingCheck.CheckedChanged += (sender, args) =>
             {
-                scheduleCheck.Enabled = willingCheck.Checked;
+                scheduleCheck.Enabled = !dutyType.ManuallyScheduled && willingCheck.Checked;
                 if (!willingCheck.Checked)
                 {
                     scheduleCheck.Checked = false;
@@ -231,8 +232,9 @@ public partial class MemberForm : Form
                 if (memberDutyLookup.TryGetValue(dutyCheckbox.Key, out var memberDuty))
                 {
                     dutyCheckbox.Value.WillingCheckBox.Checked = memberDuty.IsWilling;
-                    dutyCheckbox.Value.ScheduleCheckBox.Checked = memberDuty.UseForScheduling;
-                    dutyCheckbox.Value.ScheduleCheckBox.Enabled = memberDuty.IsWilling;
+                    dutyCheckbox.Value.ScheduleCheckBox.Checked = !dutyCheckbox.Value.DutyType.ManuallyScheduled &&
+                                                                   memberDuty.UseForScheduling;
+                    dutyCheckbox.Value.ScheduleCheckBox.Enabled = !dutyCheckbox.Value.DutyType.ManuallyScheduled && memberDuty.IsWilling;
                 }
                 else
                 {

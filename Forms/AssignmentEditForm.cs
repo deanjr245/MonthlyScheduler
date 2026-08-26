@@ -105,7 +105,8 @@ public class AssignmentEditForm : Form
         {
             var members = await _context.Members
                 .Include(m => m.AvailableDuties)
-                .Where(m => m.AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id && d.IsWilling))
+                .Where(m => !m.ExcludeFromScheduling &&
+                            m.AvailableDuties.Any(d => d.DutyTypeId == dutyType.Id && d.IsWilling))
                 .OrderBy(m => m.LastName)
                 .ThenBy(m => m.FirstName)
                 .ToListAsync();
